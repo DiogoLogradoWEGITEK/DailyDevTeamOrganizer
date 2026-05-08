@@ -1,10 +1,227 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>My Github Page</title>
+  <title>Daily Dev</title>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f0f2ff;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    body::before {
+      width: 60vw;
+      height: 60vw;
+      top: -20vw;
+      left: -15vw;
+      background: radial-gradient(circle, rgba(12,63,247,0.18) 0%, rgba(12,63,247,0) 70%);
+      filter: blur(40px);
+    }
+
+    body::after {
+      width: 50vw;
+      height: 50vw;
+      bottom: -15vw;
+      right: -10vw;
+      background: radial-gradient(circle, rgba(12,63,247,0.13) 0%, rgba(12,63,247,0) 70%);
+      filter: blur(50px);
+    }
+
+    .blob-mid {
+      position: fixed;
+      width: 35vw;
+      height: 35vw;
+      top: 50%;
+      left: 60%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(12,63,247,0.08) 0%, rgba(12,63,247,0) 70%);
+      filter: blur(35px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .timer, button, ul {
+      position: relative;
+      z-index: 1;
+    }
+
+    .timer {
+      font-size: 4vh;
+      font-weight: bold;
+      margin-bottom: 2vh;
+    }
+
+    button {
+      font-size: 2.5vh;
+      padding: 1vh 2vh;
+      margin-bottom: 2vh;
+      cursor: pointer;
+      border: 2px solid #0c3ff7;
+      background: #0c3ff7;
+      color: white;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #0930c4;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 3.5vh;
+    }
+
+    li {
+      margin: 1.2vh 0;
+      padding: 1.2vh 2vh;
+      background: #ffffff;
+      border-radius: 10px;
+      cursor: grab;
+      border: none;
+      border-left: 5px solid #0c3ff7;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #222;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+
+    li:hover {
+      background: #e8f0fe;
+      box-shadow: 0 4px 14px rgba(12,63,247,0.18);
+    }
+
+    li.dragging {
+      opacity: 0.5;
+    }
+
+    .top-left-link {
+      position: fixed;
+      top: 24px;
+      left: 24px;
+      z-index: 1000;
+      height: 32px;
+      width: auto;
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello, I'm Diogo Logrado!</h1>
-  <p>Welcome to my GitHub Pages test website.</p>
+
+  <div class="blob-mid"></div>
+  <img src="./assets/wedigitek.png" alt="Logo" class="top-left-link">
+
+  <div class="timer" id="timer">00:00</div>
+
+  <button id="startBtn" onclick="startSession()">Ordem de Apresentação</button>
+  <ul id="nameList" style="display:none;"></ul>
+
+  <script src="participants.js"></script>
+  <script src="participants.example.js"></script>
+  <script>
+    const names = (window.PARTICIPANTS || []).slice();
+
+    const listEl = document.getElementById("nameList");
+
+    let seconds = 0;
+    let timerInterval = null;
+
+    function startTimer() {
+      if (timerInterval) return;
+
+      timerInterval = setInterval(() => {
+        seconds++;
+        const mins = String(Math.floor(seconds / 60)).padStart(2, '0');
+        const secs = String(seconds % 60).padStart(2, '0');
+        document.getElementById("timer").textContent = `${mins}:${secs}`;
+      }, 1000);
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      seconds = 0;
+      document.getElementById("timer").textContent = "00:00";
+    }
+
+    function displayNames(arr) {
+      listEl.innerHTML = "";
+      arr.forEach((name) => {
+        const li = document.createElement("li");
+        li.textContent = name;
+        li.setAttribute("draggable", "true");
+        addDragAndDropHandlers(li);
+        listEl.appendChild(li);
+      });
+    }
+
+    function addDragAndDropHandlers(item) {
+      item.addEventListener("dragstart", () => {
+        item.classList.add("dragging");
+      });
+
+      item.addEventListener("dragend", () => {
+        item.classList.remove("dragging");
+        updateArrayFromDOM();
+      });
+
+      item.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        const dragging = document.querySelector(".dragging");
+        if (!dragging || dragging === item) return;
+
+        const rect = item.getBoundingClientRect();
+        const offset = e.clientY - rect.top;
+
+        if (offset > rect.height / 2) {
+          item.after(dragging);
+        } else {
+          item.before(dragging);
+        }
+      });
+    }
+
+    function updateArrayFromDOM() {
+      const items = document.querySelectorAll("#nameList li");
+      names.length = 0;
+      items.forEach(li => names.push(li.textContent));
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function startSession() {
+      shuffle(names);
+      displayNames(names);
+      listEl.style.display = "block";
+      startTimer();
+      document.getElementById("startBtn").textContent = "Reroll";
+    }
+  </script>
+
 </body>
 </html>

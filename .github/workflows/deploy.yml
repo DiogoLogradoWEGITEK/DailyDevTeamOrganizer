@@ -1,0 +1,50 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Write participants
+        # PARTICIPANTS_JSON must be a JSON array string, e.g.: ["Alice","Bob","Carol"]
+        # Set it in: Settings → Secrets and variables → Actions → New repository secret
+        env:
+          PARTICIPANTS_JSON: ${{ secrets.PARTICIPANTS_JSON }}
+        run: |
+          if [ -n "$PARTICIPANTS_JSON" ]; then
+            echo "window.PARTICIPANTS = ${PARTICIPANTS_JSON};" > participants.js
+            echo "participants.js written from secret."
+          else
+            echo "PARTICIPANTS_JSON secret not set — example data will be used as fallback."
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
