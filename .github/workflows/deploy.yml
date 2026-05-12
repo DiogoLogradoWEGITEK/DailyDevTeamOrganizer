@@ -37,6 +37,26 @@ jobs:
             echo "PARTICIPANTS_JSON secret not set — example data will be used as fallback."
           fi
 
+      - name: Write config
+        # Optional secrets — all fall back to the defaults in config.example.js if not set.
+        # PRIMARY_COLOR: hex color e.g. #0c3ff7
+        # LOGO_URL:      URL or relative path to logo image e.g. ./assets/wedigitek.png
+        # FAVICON_URL:   URL or relative path to favicon e.g. ./assets/favicon.ico
+        env:
+          PRIMARY_COLOR: ${{ secrets.PRIMARY_COLOR }}
+          LOGO_URL: ${{ secrets.LOGO_URL }}
+          FAVICON_URL: ${{ secrets.FAVICON_URL }}
+        run: |
+          if [ -n "$PRIMARY_COLOR" ] || [ -n "$LOGO_URL" ] || [ -n "$FAVICON_URL" ]; then
+            COLOR="${PRIMARY_COLOR:-#0c3ff7}"
+            LOGO="${LOGO_URL:-./assets/wedigitek.png}"
+            FAVICON="${FAVICON_URL:-./assets/favicon.ico}"
+            echo "window.CONFIG = { primaryColor: \"${COLOR}\", logoUrl: \"${LOGO}\", faviconUrl: \"${FAVICON}\" };" > config.js
+            echo "config.js written from secrets."
+          else
+            echo "No config secrets set — config.example.js fallback will be used."
+          fi
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 

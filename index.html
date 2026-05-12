@@ -3,6 +3,29 @@
 <head>
   <title>Daily Dev</title>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/x-icon" href="assets/favicon.ico" id="favicon">
+  <script src="config.js"></script>
+  <script src="config.example.js"></script>
+  <script>
+    (function () {
+      var cfg = window.CONFIG || {};
+      var hex = (cfg.primaryColor || '#0c3ff7').replace(/^#/, '');
+      var r = parseInt(hex.slice(0, 2), 16);
+      var g = parseInt(hex.slice(2, 4), 16);
+      var b = parseInt(hex.slice(4, 6), 16);
+      function mix(c, t, a) { return Math.round(c + (t - c) * a); }
+      function toHex(r, g, b) { return '#' + [r, g, b].map(function (v) { return v.toString(16).padStart(2, '0'); }).join(''); }
+      var root = document.documentElement;
+      root.style.setProperty('--cp',      '#' + hex);
+      root.style.setProperty('--cp-r',    r);
+      root.style.setProperty('--cp-g',    g);
+      root.style.setProperty('--cp-b',    b);
+      root.style.setProperty('--cp-dark', toHex(mix(r, 0, 0.30), mix(g, 0, 0.30), mix(b, 0, 0.30)));
+      root.style.setProperty('--cp-bg',   toHex(mix(r, 255, 0.94), mix(g, 255, 0.94), mix(b, 255, 0.94)));
+      root.style.setProperty('--cp-hov',  toHex(mix(r, 255, 0.82), mix(g, 255, 0.82), mix(b, 255, 0.82)));
+      if (cfg.faviconUrl) document.getElementById('favicon').href = cfg.faviconUrl;
+    })();
+  </script>
   <style>
     body {
       margin: 0;
@@ -12,7 +35,7 @@
       justify-content: center;
       align-items: center;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      background: #f0f2ff;
+      background: var(--cp-bg);
       text-align: center;
       overflow: hidden;
     }
@@ -31,7 +54,7 @@
       height: 60vw;
       top: -20vw;
       left: -15vw;
-      background: radial-gradient(circle, rgba(12,63,247,0.18) 0%, rgba(12,63,247,0) 70%);
+      background: radial-gradient(circle, rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.18) 0%, transparent 70%);
       filter: blur(40px);
     }
 
@@ -40,7 +63,7 @@
       height: 50vw;
       bottom: -15vw;
       right: -10vw;
-      background: radial-gradient(circle, rgba(12,63,247,0.13) 0%, rgba(12,63,247,0) 70%);
+      background: radial-gradient(circle, rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.13) 0%, transparent 70%);
       filter: blur(50px);
     }
 
@@ -52,7 +75,7 @@
       left: 60%;
       transform: translate(-50%, -50%);
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(12,63,247,0.08) 0%, rgba(12,63,247,0) 70%);
+      background: radial-gradient(circle, rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.08) 0%, transparent 70%);
       filter: blur(35px);
       pointer-events: none;
       z-index: 0;
@@ -74,15 +97,17 @@
       padding: 1vh 2vh;
       margin-bottom: 2vh;
       cursor: pointer;
-      border: 2px solid #0c3ff7;
-      background: #0c3ff7;
+      border: 2px solid var(--cp);
+      background: var(--cp);
       color: white;
       border-radius: 6px;
-      transition: background 0.2s;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
     }
 
     button:hover {
-      background: #0930c4;
+      background: var(--cp-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.45);
     }
 
     ul {
@@ -99,17 +124,18 @@
       border-radius: 10px;
       cursor: grab;
       border: none;
-      border-left: 5px solid #0c3ff7;
+      border-left: 5px solid var(--cp);
       box-shadow: 0 2px 8px rgba(0,0,0,0.10);
       font-weight: 600;
       letter-spacing: 0.02em;
       color: #222;
-      transition: background 0.15s, box-shadow 0.15s;
+      transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
     }
 
     li:hover {
-      background: #e8f0fe;
-      box-shadow: 0 4px 14px rgba(12,63,247,0.18);
+      background: var(--cp-hov);
+      box-shadow: 0 6px 20px rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.32);
+      transform: translateX(4px);
     }
 
     li.dragging {
@@ -129,16 +155,29 @@
 <body>
 
   <div class="blob-mid"></div>
-  <img src="./assets/wedigitek.png" alt="Logo" class="top-left-link">
+  <img src="./assets/wedigitek.png" alt="Logo" class="top-left-link" id="logo">
 
   <div class="timer" id="timer">00:00</div>
 
-  <button id="startBtn" onclick="startSession()">Ordem de Apresentação</button>
+  <button id="startBtn" onclick="startSession()"></button>
   <ul id="nameList" style="display:none;"></ul>
 
   <script src="participants.js"></script>
   <script src="participants.example.js"></script>
   <script>
+    const TRANSLATIONS = {
+      en: { startBtn: 'Presentation Order', reroll: 'Reroll' },
+      pt: { startBtn: 'Ordem de Apresentação', reroll: 'Reembaralhar' }
+    };
+    const lang = navigator.language && navigator.language.startsWith('pt') ? 'pt' : 'en';
+    const t = TRANSLATIONS[lang];
+
+    // Apply logo URL from config
+    const logoEl = document.getElementById('logo');
+    if (window.CONFIG && window.CONFIG.logoUrl) logoEl.src = window.CONFIG.logoUrl;
+
+    document.getElementById('startBtn').textContent = t.startBtn;
+
     const names = (window.PARTICIPANTS || []).slice();
 
     const listEl = document.getElementById("nameList");
@@ -219,7 +258,7 @@
       displayNames(names);
       listEl.style.display = "block";
       startTimer();
-      document.getElementById("startBtn").textContent = "Reroll";
+      document.getElementById("startBtn").textContent = t.reroll;
     }
   </script>
 
