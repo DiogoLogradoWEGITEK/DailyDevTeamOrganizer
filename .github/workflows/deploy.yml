@@ -31,7 +31,7 @@ jobs:
           PARTICIPANTS_JSON: ${{ secrets.PARTICIPANTS_JSON }}
         run: |
           if [ -n "$PARTICIPANTS_JSON" ]; then
-            echo "window.PARTICIPANTS = ${PARTICIPANTS_JSON};" > participants.js
+            printf 'window.PARTICIPANTS = %s;\n' "$PARTICIPANTS_JSON" > participants.js
             echo "participants.js written from secret."
           else
             echo "PARTICIPANTS_JSON secret not set — example data will be used as fallback."
