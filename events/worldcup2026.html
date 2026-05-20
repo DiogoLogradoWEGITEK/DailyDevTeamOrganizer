@@ -191,31 +191,14 @@ function norm(n) { return TEAM_NORM[n] || n; }
 let teamStatus  = {};
 let bets        = {};
 let allTeams    = [...FALLBACK_TEAMS];
-let throttleTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   rebuildDatalist();
   renderBets();
-  if (window.location.protocol === 'file:') {
-    document.getElementById('matchesContent').innerHTML =
-      '<p class="empty">Live data unavailable when opening as a file.<br>Deploy to GitHub Pages or run: <code>npx serve .</code></p>';
-    return;
-  }
   loadAll();
 });
 
 // ── Gist ──────────────────────────────────────────────────────────────────────
-async function loadBets() {
-  const gistId = (window.CONFIG || {}).gistId;
-  if (!gistId) return;
-  try {
-    const r = await fetch(`https://api.github.com/gists/${gistId}`);
-    if (!r.ok) return;
-    const d = await r.json();
-    const f = d.files && d.files[GIST_FILE];
-    if (f && f.content) { bets = JSON.parse(f.content); renderBets(); }
-  } catch(_) {}
-}
 
 async function saveBet(name, team) {
   const cfg    = window.CONFIG || {};
@@ -235,90 +218,57 @@ async function saveBet(name, team) {
   } catch(_) { setDot(name, 'error'); }
 }
 
-// ── API load ──────────────────────────────────────────────────────────────────
+// ── API load (data fetched server-side by Actions, cached in Gist) ────────────
 async function loadAll() {
-  const token = (window.CONFIG || {}).footballDataToken;
-  await loadBets();
-
-  if (!token) {
+  if (window.location.protocol === 'file:') {
     document.getElementById('matchesContent').innerHTML =
-      '<p class="empty">Add the <strong>FOOTBALL_DATA_TOKEN</strong> secret to see live matches.</p>';
+      '<p class="empty">Live data unavailable when opening as a file.<br>Deploy to GitHub Pages or run: <code>npx serve .</code></p>';
     return;
   }
-
-  const fdH  = { 'X-Auth-Token': token };
-  const now  = new Date();
-  const from = fmtDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 5));
-  const to   = fmtDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 35));
-
-  const [teamsR, matchR, standR] = await Promise.allSettled([
-    fetch('https://api.football-data.org/v4/competitions/WC/teams?season=2026',                                                { headers: fdH }),
-    fetch(`https://api.football-data.org/v4/competitions/WC/matches?season=2026&dateFrom=${from}&dateTo=${to}`, { headers: fdH }),
-    fetch('https://api.football-data.org/v4/competitions/WC/standings?season=2026',                                            { headers: fdH }),
-  ]);
-
-  // Teams → populate autocomplete
-  if (teamsR.status === 'fulfilled' && teamsR.value.ok) {
-    handleThrottleHeaders(teamsR.value);
-    try {
-      const d = await teamsR.value.json();
-      if (d.teams && d.teams.length) {
-        allTeams = d.teams.map(t => norm(t.shortName || t.name)).sort();
-        rebuildDatalist();
-      }
-    } catch(_) {}
-  }
-
-  // Standings → team status + badges
-  if (standR.status === 'fulfilled') {
-    const r = standR.value;
-    if (r.status === 429) { handleRateLimit(r); return; }
-    handleThrottleHeaders(r);
-    if (r.ok) {
-      try {
-        const d = await r.json();
-        buildTeamStatus(d.standings || []);
-        renderBets();
-        renderStandings(d.standings || []);
-      } catch(_) {}
-    }
-  }
-
-  // Matches
-  if (matchR.status === 'rejected') {
+  const gistId = (window.CONFIG || {}).gistId;
+  if (!gistId) {
     document.getElementById('matchesContent').innerHTML =
-      `<p class="empty">Network error: ${matchR.reason?.message || 'fetch failed'}.</p>`;
-  } else {
-    const r = matchR.value;
-    if (r.status === 429) { handleRateLimit(r); return; }
-    handleThrottleHeaders(r);
-    if (r.ok) {
-      try { const d = await r.json(); renderMatches(d.matches || []); }
-      catch(e) { document.getElementById('matchesContent').innerHTML = `<p class="empty">Parse error: ${e.message}</p>`; }
-    } else {
-      let detail = `HTTP ${r.status}`;
-      try { const e = await r.json(); if (e.message) detail += ` — ${e.message}`; } catch(_) {}
-      document.getElementById('matchesContent').innerHTML = `<p class="empty">API error: ${detail}</p>`;
+      '<p class="empty">Configure the <strong>GIST_ID</strong> secret to enable live data.</p>';
+    return;
+  }
+  try {
+    const r = await fetch(`https://api.github.com/gists/${gistId}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const gist = await r.json();
+
+    // Bets
+    const betsFile = gist.files[GIST_FILE];
+    if (betsFile && betsFile.content) { bets = JSON.parse(betsFile.content); renderBets(); }
+
+    // Match data cached by the scheduled GitHub Actions workflow
+    const dataFile = gist.files['wc2026-data.json'];
+    if (!dataFile) {
+      document.getElementById('matchesContent').innerHTML =
+        '<p class="empty">Match data not yet cached — the scheduler runs every 2 hours. Check back soon!</p>';
+      return;
     }
+    const data = JSON.parse(dataFile.content);
+
+    if (data.teams?.teams?.length) {
+      allTeams = data.teams.teams.map(t => norm(t.shortName || t.name)).sort();
+      rebuildDatalist();
+    }
+    if (data.standings?.standings) {
+      buildTeamStatus(data.standings.standings);
+      renderBets();
+      renderStandings(data.standings.standings);
+    }
+    if (data.matches?.matches?.length) {
+      renderMatches(data.matches.matches);
+    } else {
+      document.getElementById('matchesContent').innerHTML =
+        '<p class="empty">No matches available yet. The group stage begins <strong>June 11, 2026</strong>.</p>';
+    }
+  } catch(e) {
+    document.getElementById('matchesContent').innerHTML =
+      `<p class="empty">Failed to load data: ${e.message}</p>`;
   }
 }
-
-function handleRateLimit(resp) {
-  const reset = parseInt(resp.headers.get('X-RequestCounter-Reset') || '60', 10);
-  document.getElementById('matchesContent').innerHTML =
-    `<p class="empty">Rate limited — auto-retrying in ${reset}s.</p>`;
-  if (!throttleTimer)
-    throttleTimer = setTimeout(() => { throttleTimer = null; loadAll(); }, reset * 1000);
-}
-
-function handleThrottleHeaders(resp) {
-  const available = parseInt(resp.headers.get('X-Requests-Available-Minute') || '99', 10);
-  const reset     = parseInt(resp.headers.get('X-RequestCounter-Reset')       || '0',  10);
-  if (available <= 1 && reset > 0 && !throttleTimer)
-    throttleTimer = setTimeout(() => { throttleTimer = null; }, reset * 1000);
-}
-
-function fmtDate(d) { return d.toISOString().split('T')[0]; }
 
 // ── Bets UI ───────────────────────────────────────────────────────────────────
 function rebuildDatalist() {
