@@ -15,28 +15,33 @@ jobs:
           GIST_ID: ${{ secrets.GIST_ID }}
           GIST_PAT: ${{ secrets.GIST_PAT }}
         run: |
-          # Fetch all three endpoints (server-side = no CORS restriction)
-          TEAMS=$(curl -sf -H "X-Auth-Token: $FD_TOKEN" \
-            "https://api.football-data.org/v4/competitions/WC/teams?season=2026")
+          # Fetch all three endpoints server-side (no CORS restriction)
+          # Write directly to temp files to avoid "argument list too long" with large responses
+          curl -sf -H "X-Auth-Token: $FD_TOKEN" \
+            "https://api.football-data.org/v4/competitions/WC/teams?season=2026" \
+            > /tmp/wc-teams.json
           sleep 7
 
-          MATCHES=$(curl -sf -H "X-Auth-Token: $FD_TOKEN" \
-            "https://api.football-data.org/v4/competitions/WC/matches?season=2026")
+          curl -sf -H "X-Auth-Token: $FD_TOKEN" \
+            "https://api.football-data.org/v4/competitions/WC/matches?season=2026" \
+            > /tmp/wc-matches.json
           sleep 7
 
-          STANDINGS=$(curl -sf -H "X-Auth-Token: $FD_TOKEN" \
-            "https://api.football-data.org/v4/competitions/WC/standings?season=2026")
+          curl -sf -H "X-Auth-Token: $FD_TOKEN" \
+            "https://api.football-data.org/v4/competitions/WC/standings?season=2026" \
+            > /tmp/wc-standings.json
 
-          # Combine into one JSON blob
-          COMBINED=$(jq -n \
+          # Combine — use --slurpfile (reads JSON from disk, no arg-length limit)
+          jq -n \
             --arg updatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --argjson teams    "$TEAMS"    \
-            --argjson matches  "$MATCHES"  \
-            --argjson standings "$STANDINGS" \
-            '{updatedAt: $updatedAt, teams: $teams, matches: $matches, standings: $standings}')
+            --slurpfile teams     /tmp/wc-teams.json \
+            --slurpfile matches   /tmp/wc-matches.json \
+            --slurpfile standings /tmp/wc-standings.json \
+            '{updatedAt: $updatedAt, teams: $teams[0], matches: $matches[0], standings: $standings[0]}' \
+            > /tmp/wc2026-data.json
 
-          # Push to Gist (jq handles JSON escaping of the content string)
-          jq -n --arg content "$COMBINED" \
+          # Patch Gist — use --rawfile so the file content is the string value
+          jq -n --rawfile content /tmp/wc2026-data.json \
             '{files: {"wc2026-data.json": {content: $content}}}' \
           | curl -sf -X PATCH "https://api.github.com/gists/$GIST_ID" \
               -H "Authorization: token $GIST_PAT" \
