@@ -252,9 +252,9 @@ async function loadAll() {
   const to   = fmtDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 35));
 
   const [teamsR, matchR, standR] = await Promise.allSettled([
-    fetch('https://api.football-data.org/v4/competitions/WC/teams',                                         { headers: fdH }),
-    fetch(`https://api.football-data.org/v4/competitions/WC/matches?dateFrom=${from}&dateTo=${to}`, { headers: fdH }),
-    fetch('https://api.football-data.org/v4/competitions/WC/standings',                                     { headers: fdH }),
+    fetch('https://api.football-data.org/v4/competitions/WC/teams?season=2026',                                                { headers: fdH }),
+    fetch(`https://api.football-data.org/v4/competitions/WC/matches?season=2026&dateFrom=${from}&dateTo=${to}`, { headers: fdH }),
+    fetch('https://api.football-data.org/v4/competitions/WC/standings?season=2026',                                            { headers: fdH }),
   ]);
 
   // Teams → populate autocomplete
