@@ -1,0 +1,470 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>WC 2026 Predictions</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="../assets/favicon.ico">
+  <script src="../config.js" onerror="void 0"></script>
+  <script src="../config.example.js"></script>
+  <script>
+    (function () {
+      var cfg = window.CONFIG || {};
+      var hex = (cfg.primaryColor || '#0c3ff7').replace(/^#/, '');
+      var r = parseInt(hex.slice(0, 2), 16);
+      var g = parseInt(hex.slice(2, 4), 16);
+      var b = parseInt(hex.slice(4, 6), 16);
+      function mix(c, t, a) { return Math.round(c + (t - c) * a); }
+      function toHex(r, g, b) { return '#' + [r, g, b].map(function (v) { return v.toString(16).padStart(2, '0'); }).join(''); }
+      var root = document.documentElement;
+      root.style.setProperty('--cp',      '#' + hex);
+      root.style.setProperty('--cp-r',    r);
+      root.style.setProperty('--cp-g',    g);
+      root.style.setProperty('--cp-b',    b);
+      root.style.setProperty('--cp-dark', toHex(mix(r, 0, 0.30), mix(g, 0, 0.30), mix(b, 0, 0.30)));
+      root.style.setProperty('--cp-bg',   toHex(mix(r, 255, 0.94), mix(g, 255, 0.94), mix(b, 255, 0.94)));
+      root.style.setProperty('--cp-hov',  toHex(mix(r, 255, 0.82), mix(g, 255, 0.82), mix(b, 255, 0.82)));
+      if (cfg.faviconUrl) { var fav = document.getElementById('favicon'); if (fav) fav.href = cfg.faviconUrl; }
+    })();
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--cp-bg); color: #222; min-height: 100vh;
+    }
+    .header {
+      position: sticky; top: 0; z-index: 100; background: white;
+      border-bottom: 2px solid var(--cp);
+      display: flex; align-items: center; padding: 0 20px; height: 56px; gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    .back-link { text-decoration: none; color: var(--cp); font-size: 1.4rem; font-weight: bold; }
+    .back-link:hover { color: var(--cp-dark); }
+    .header-title { flex: 1; font-size: 1.1rem; font-weight: 700; }
+    .content { max-width: 960px; margin: 0 auto; padding: 24px 16px 60px; }
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--cp); margin-bottom: 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--cp-hov); }
+
+    /* Bets grid */
+    .picks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+    .pick-input {
+      width: 100%; padding: 5px 8px; margin-top: 8px;
+      border: 1.5px solid #ddd; border-radius: 6px;
+      font-size: 0.82rem; text-align: center; background: #fafafa;
+      transition: border-color .15s;
+    }
+    .pick-input:focus { outline: none; border-color: var(--cp); background: white; }
+    .save-dot {
+      display: block; width: 6px; height: 6px; border-radius: 50%;
+      margin: 6px auto 0; background: transparent; transition: background .2s;
+    }
+    .save-dot.saving { background: #f0ad4e; }
+    .save-dot.saved  { background: #27ae60; }
+    .save-dot.error  { background: #e74c3c; }
+    .pick-card {
+      background: white; border-radius: 12px; padding: 14px 12px; text-align: center;
+      border: 2px solid #eee; box-shadow: 0 1px 6px rgba(0,0,0,.06);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .pick-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.12); }
+    .pick-name { font-size: 0.95rem; font-weight: 700; margin-bottom: 5px; }
+    .pick-team { font-size: 0.82rem; color: #555; }
+    .pick-badge { display: inline-block; margin-top: 6px; font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+    .pick-card.s-top    { border-color: #27ae60; }
+    .pick-card.s-top    .pick-badge { background: #d4edda; color: #155724; }
+    .pick-card.s-second { border-color: #2980b9; }
+    .pick-card.s-second .pick-badge { background: #d0e8f5; color: #0c5460; }
+    .pick-card.s-out    { border-color: #e74c3c; opacity: .65; }
+    .pick-card.s-out    .pick-badge { background: #f8d7da; color: #721c24; }
+
+    /* Match cards */
+    .match-group { margin-bottom: 18px; }
+    .match-group-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #999; margin-bottom: 8px; }
+    .match-list { display: flex; flex-direction: column; gap: 7px; }
+    .match-card {
+      background: white; border-radius: 10px; padding: 11px 16px;
+      display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 5px rgba(0,0,0,.07);
+    }
+    .match-card.live { border-left: 4px solid #e74c3c; }
+    .match-meta { min-width: 76px; font-size: 0.74rem; color: #aaa; }
+    .match-meta strong { display: block; color: #555; font-size: 0.78rem; margin-bottom: 2px; }
+    .match-teams { flex: 1; }
+    .match-row { display: flex; align-items: center; gap: 10px; padding: 2px 0; }
+    .match-team-name { flex: 1; font-size: 0.88rem; font-weight: 600; }
+    .match-team-name.winner { color: var(--cp); }
+    .match-score { font-size: 1.05rem; font-weight: 800; min-width: 18px; text-align: center; }
+    .match-pill { font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+    .pill-live { background: #fde8e8; color: #c0392b; animation: pulse 1.4s ease-in-out infinite; }
+    .pill-ft   { background: #f0f0f0; color: #666; }
+    .pill-soon { background: #e8f4fd; color: #1565c0; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+
+    /* Standings */
+    .standings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 12px; }
+    .stnd-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,.07); }
+    .stnd-card-hd {
+      background: var(--cp); color: white; padding: 7px 14px;
+      font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 6px;
+    }
+    .stnd-card-hd .badge { font-size: 0.65rem; padding: 1px 6px; background: rgba(255,255,255,.25); border-radius: 10px; }
+    .stnd-tbl { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .stnd-tbl th { padding: 4px 10px; background: #f8f8f8; color: #aaa; font-size: 0.67rem; text-transform: uppercase; text-align: center; }
+    .stnd-tbl th:first-child { text-align: left; }
+    .stnd-tbl td { padding: 6px 10px; border-bottom: 1px solid #f4f4f4; text-align: center; color: #666; }
+    .stnd-tbl td:first-child { text-align: left; font-weight: 600; color: #222; }
+    .stnd-tbl td:last-child { font-weight: 700; color: var(--cp); }
+    .stnd-tbl tr:last-child td { border-bottom: none; }
+    .stnd-tbl tr.q { background: rgba(39,174,96,.04); }
+    .stnd-tbl tr.q td:first-child { color: #1a7a3c; }
+
+    /* States */
+    .empty { text-align: center; padding: 36px 20px; color: #bbb; font-size: 0.88rem; line-height: 1.6; }
+    .dots { display: flex; gap: 6px; justify-content: center; padding: 28px; }
+    .dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--cp); animation: bounce .8s ease-in-out infinite; }
+    .dots span:nth-child(2) { animation-delay: .14s; }
+    .dots span:nth-child(3) { animation-delay: .28s; }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <a href="../index.html" class="back-link" title="Back">&#8592;</a>
+  <span class="header-title">&#9917; WC 2026</span>
+</div>
+
+<div class="content">
+  <div class="section">
+    <div class="section-title">&#127942; Our Bets</div>
+    <div class="picks-grid" id="picksGrid"></div>
+  </div>
+  <div class="section">
+    <div class="section-title">&#127936; Matches</div>
+    <div id="matchesContent"><div class="dots"><span></span><span></span><span></span></div></div>
+  </div>
+  <div class="section" id="standingsSection" style="display:none">
+    <div class="section-title">&#128202; Standings</div>
+    <div class="standings-grid" id="standingsGrid"></div>
+  </div>
+</div>
+
+<datalist id="teams-list"></datalist>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// PARTICIPANTS — edit this list to add/remove people from the bet pool
+// ─────────────────────────────────────────────────────────────────────────────
+const PARTICIPANTS = ['Diogo', 'Cleiton', 'Guilherme', 'Hudson', 'Miguel', 'Wictor', 'Edcarlos', 'João'];
+const GIST_FILE    = 'wc2026-bets.json';
+
+// Fallback team list used before the API responds
+const FALLBACK_TEAMS = [
+  'Algeria','Argentina','Australia','Austria','Belgium','Bolivia',
+  'Bosnia and Herzegovina','Brazil','Canada','Cape Verde','Chile','Colombia',
+  'Costa Rica','Croatia','Czech Republic','DR Congo','Ecuador','Egypt',
+  'England','France','Germany','Ghana','Guatemala','Haiti','Honduras',
+  'Indonesia','Iran','Iraq','Ivory Coast','Jamaica','Japan','Jordan',
+  'Mexico','Morocco','Netherlands','New Zealand','Norway','Panama','Paraguay',
+  'Peru','Portugal','Qatar','Saudi Arabia','Scotland','Senegal',
+  'South Africa','South Korea','Spain','Sweden','Switzerland',
+  'Tunisia','Turkey','United States','Uruguay','Uzbekistan',
+];
+
+const TEAM_NORM = {
+  'USA': 'United States',
+  "Côte d'Ivoire": 'Ivory Coast', "Cote d'Ivoire": 'Ivory Coast',
+  'Congo DR': 'DR Congo', 'Curacao': 'Curaçao',
+  'Bosnia-Herzegovina': 'Bosnia and Herzegovina',
+  'Korea Republic': 'South Korea', 'Republic of Korea': 'South Korea',
+  'Türkiye': 'Turkey', 'Czechia': 'Czech Republic',
+  'Cape Verde Islands': 'Cape Verde',
+};
+function norm(n) { return TEAM_NORM[n] || n; }
+
+let teamStatus  = {};
+let bets        = {};
+let allTeams    = [...FALLBACK_TEAMS];
+let throttleTimer = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  rebuildDatalist();
+  renderBets();
+  if (window.location.protocol === 'file:') {
+    document.getElementById('matchesContent').innerHTML =
+      '<p class="empty">Live data unavailable when opening as a file.<br>Deploy to GitHub Pages or run: <code>npx serve .</code></p>';
+    return;
+  }
+  loadAll();
+});
+
+// ── Gist ──────────────────────────────────────────────────────────────────────
+async function loadBets() {
+  const gistId = (window.CONFIG || {}).gistId;
+  if (!gistId) return;
+  try {
+    const r = await fetch(`https://api.github.com/gists/${gistId}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    const f = d.files && d.files[GIST_FILE];
+    if (f && f.content) { bets = JSON.parse(f.content); renderBets(); }
+  } catch(_) {}
+}
+
+async function saveBet(name, team) {
+  const cfg    = window.CONFIG || {};
+  const gistId = cfg.gistId;
+  const pat    = cfg.gistPat;
+  if (team) bets[name] = team; else delete bets[name];
+  updateCardStatus(name, team);
+  if (!gistId || !pat) { setDot(name, 'error'); return; }
+  try {
+    const r = await fetch(`https://api.github.com/gists/${gistId}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `token ${pat}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(bets, null, 2) } } }),
+    });
+    setDot(name, r.ok ? 'saved' : 'error');
+    if (r.ok) setTimeout(() => setDot(name, ''), 2000);
+  } catch(_) { setDot(name, 'error'); }
+}
+
+// ── API load ──────────────────────────────────────────────────────────────────
+async function loadAll() {
+  const token = (window.CONFIG || {}).footballDataToken;
+  await loadBets();
+
+  if (!token) {
+    document.getElementById('matchesContent').innerHTML =
+      '<p class="empty">Add the <strong>FOOTBALL_DATA_TOKEN</strong> secret to see live matches.</p>';
+    return;
+  }
+
+  const fdH  = { 'X-Auth-Token': token };
+  const now  = new Date();
+  const from = fmtDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 5));
+  const to   = fmtDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 35));
+
+  const [teamsR, matchR, standR] = await Promise.allSettled([
+    fetch('https://api.football-data.org/v4/competitions/WC/teams',                                         { headers: fdH }),
+    fetch(`https://api.football-data.org/v4/competitions/WC/matches?dateFrom=${from}&dateTo=${to}`, { headers: fdH }),
+    fetch('https://api.football-data.org/v4/competitions/WC/standings',                                     { headers: fdH }),
+  ]);
+
+  // Teams → populate autocomplete
+  if (teamsR.status === 'fulfilled' && teamsR.value.ok) {
+    handleThrottleHeaders(teamsR.value);
+    try {
+      const d = await teamsR.value.json();
+      if (d.teams && d.teams.length) {
+        allTeams = d.teams.map(t => norm(t.shortName || t.name)).sort();
+        rebuildDatalist();
+      }
+    } catch(_) {}
+  }
+
+  // Standings → team status + badges
+  if (standR.status === 'fulfilled') {
+    const r = standR.value;
+    if (r.status === 429) { handleRateLimit(r); return; }
+    handleThrottleHeaders(r);
+    if (r.ok) {
+      try {
+        const d = await r.json();
+        buildTeamStatus(d.standings || []);
+        renderBets();
+        renderStandings(d.standings || []);
+      } catch(_) {}
+    }
+  }
+
+  // Matches
+  if (matchR.status === 'rejected') {
+    document.getElementById('matchesContent').innerHTML =
+      `<p class="empty">Network error: ${matchR.reason?.message || 'fetch failed'}.</p>`;
+  } else {
+    const r = matchR.value;
+    if (r.status === 429) { handleRateLimit(r); return; }
+    handleThrottleHeaders(r);
+    if (r.ok) {
+      try { const d = await r.json(); renderMatches(d.matches || []); }
+      catch(e) { document.getElementById('matchesContent').innerHTML = `<p class="empty">Parse error: ${e.message}</p>`; }
+    } else {
+      let detail = `HTTP ${r.status}`;
+      try { const e = await r.json(); if (e.message) detail += ` — ${e.message}`; } catch(_) {}
+      document.getElementById('matchesContent').innerHTML = `<p class="empty">API error: ${detail}</p>`;
+    }
+  }
+}
+
+function handleRateLimit(resp) {
+  const reset = parseInt(resp.headers.get('X-RequestCounter-Reset') || '60', 10);
+  document.getElementById('matchesContent').innerHTML =
+    `<p class="empty">Rate limited — auto-retrying in ${reset}s.</p>`;
+  if (!throttleTimer)
+    throttleTimer = setTimeout(() => { throttleTimer = null; loadAll(); }, reset * 1000);
+}
+
+function handleThrottleHeaders(resp) {
+  const available = parseInt(resp.headers.get('X-Requests-Available-Minute') || '99', 10);
+  const reset     = parseInt(resp.headers.get('X-RequestCounter-Reset')       || '0',  10);
+  if (available <= 1 && reset > 0 && !throttleTimer)
+    throttleTimer = setTimeout(() => { throttleTimer = null; }, reset * 1000);
+}
+
+function fmtDate(d) { return d.toISOString().split('T')[0]; }
+
+// ── Bets UI ───────────────────────────────────────────────────────────────────
+function rebuildDatalist() {
+  const dl = document.getElementById('teams-list');
+  if (dl) dl.innerHTML = allTeams.map(t => `<option value="${t}">`).join('');
+}
+
+function buildTeamStatus(standings) {
+  teamStatus = {};
+  standings.forEach(g => {
+    if (g.type !== 'TOTAL') return;
+    const done = g.table.length === 4 && g.table.every(r => r.playedGames >= 3);
+    g.table.forEach(r => {
+      teamStatus[norm(r.team.shortName || r.team.name)] = { pos: r.position, complete: done };
+    });
+  });
+}
+
+function teamBadge(team) {
+  const st = teamStatus[team];
+  if (!st) return { cls: '', badge: '' };
+  if (st.pos === 1)    return { cls: 's-top',    badge: st.complete ? '1st 🏆' : '1st' };
+  if (st.pos === 2)    return { cls: 's-second', badge: st.complete ? '2nd ✓'  : '2nd' };
+  if (st.complete)     return { cls: 's-out',    badge: 'Eliminated' };
+  return { cls: '', badge: `${st.pos}${['st','nd','rd'][st.pos-1]||'th'}` };
+}
+
+function renderBets() {
+  const grid = document.getElementById('picksGrid');
+  grid.innerHTML = PARTICIPANTS.map(name => {
+    const team       = bets[name] || '';
+    const { cls, badge } = teamBadge(team);
+    return `<div class="pick-card ${cls}" id="card-${name}">
+      <div class="pick-name">${name}</div>
+      <input list="teams-list" class="pick-input" id="input-${name}"
+             placeholder="Pick a team…" value="${team}"
+             onchange="onBetChange('${name}', this)">
+      <span class="pick-badge" style="${badge ? '' : 'visibility:hidden'}">${badge || '·'}</span>
+      <span class="save-dot" id="dot-${name}"></span>
+    </div>`;
+  }).join('');
+}
+
+function onBetChange(name, input) {
+  const team = input.value.trim();
+  setDot(name, 'saving');
+  saveBet(name, team);
+}
+
+function updateCardStatus(name, team) {
+  const card = document.getElementById(`card-${name}`);
+  if (!card) return;
+  const { cls, badge } = teamBadge(team);
+  card.className = `pick-card${cls ? ' ' + cls : ''}`;
+  const b = card.querySelector('.pick-badge');
+  if (b) { b.textContent = badge || '·'; b.style.visibility = badge ? '' : 'hidden'; }
+}
+
+function setDot(name, state) {
+  const d = document.getElementById(`dot-${name}`);
+  if (d) d.className = `save-dot${state ? ' ' + state : ''}`;
+}
+
+// ── Matches ───────────────────────────────────────────────────────────────────
+function renderMatches(matches) {
+  const el       = document.getElementById('matchesContent');
+  const live     = matches.filter(m => m.status === 'IN_PLAY' || m.status === 'PAUSED');
+  const finished = matches.filter(m => m.status === 'FINISHED').reverse().slice(0, 8);
+  const upcoming = matches.filter(m => m.status === 'SCHEDULED' || m.status === 'TIMED').slice(0, 8);
+  if (!live.length && !finished.length && !upcoming.length) {
+    el.innerHTML = '<p class="empty">No matches in this window.<br>The group stage begins <strong>June 11, 2026</strong>.</p>';
+    return;
+  }
+  let html = '';
+  if (live.length)     html += matchGroup('🔴 Live Now',    live);
+  if (finished.length) html += matchGroup('Recent Results', finished);
+  if (upcoming.length) html += matchGroup('Coming Up',      upcoming);
+  el.innerHTML = html;
+}
+
+function matchGroup(label, matches) {
+  return `<div class="match-group">
+    <div class="match-group-label">${label}</div>
+    <div class="match-list">${matches.map(matchCard).join('')}</div>
+  </div>`;
+}
+
+function matchCard(m) {
+  const home   = norm(m.homeTeam.shortName || m.homeTeam.name || '?');
+  const away   = norm(m.awayTeam.shortName || m.awayTeam.name || '?');
+  const hs     = m.score?.fullTime?.home;
+  const as_    = m.score?.fullTime?.away;
+  const hasSc  = hs !== null && hs !== undefined;
+  const win    = m.score?.winner;
+  const isLive = m.status === 'IN_PLAY' || m.status === 'PAUSED';
+  const isDone = m.status === 'FINISHED';
+  const d      = new Date(m.utcDate);
+  const day    = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const time   = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const stage  = m.group ? `Group ${m.group.replace('GROUP_', '')}` : stageLabel(m.stage);
+  const pill   = isLive ? '<span class="match-pill pill-live">LIVE</span>'
+    : isDone            ? '<span class="match-pill pill-ft">FT</span>'
+    :                     `<span class="match-pill pill-soon">${time}</span>`;
+  return `<div class="match-card${isLive ? ' live' : ''}">
+    <div class="match-meta"><strong>${stage}</strong>${day}</div>
+    <div class="match-teams">
+      <div class="match-row">
+        <span class="match-team-name${win==='HOME_TEAM'?' winner':''}">${home}</span>
+        <span class="match-score">${hasSc ? hs : ''}</span>
+      </div>
+      <div class="match-row">
+        <span class="match-team-name${win==='AWAY_TEAM'?' winner':''}">${away}</span>
+        <span class="match-score">${hasSc ? as_ : ''}</span>
+      </div>
+    </div>
+    ${pill}
+  </div>`;
+}
+
+function stageLabel(s) {
+  return { GROUP_STAGE:'Group Stage', ROUND_OF_32:'R32', ROUND_OF_16:'R16',
+           QUARTER_FINALS:'QF', SEMI_FINALS:'SF', FINAL:'Final', THIRD_PLACE:'3rd Place' }[s] || (s||'');
+}
+
+// ── Standings ─────────────────────────────────────────────────────────────────
+function renderStandings(standings) {
+  const groups = standings.filter(g => g.type === 'TOTAL');
+  if (!groups.some(g => g.table.some(r => r.playedGames > 0))) return;
+  document.getElementById('standingsSection').style.display = '';
+  document.getElementById('standingsGrid').innerHTML = groups.map(g => {
+    const letter = (g.group || '').replace('GROUP_', '');
+    const done   = g.table.length === 4 && g.table.every(r => r.playedGames >= 3);
+    const rows   = g.table.map((r, i) => {
+      const name = norm(r.team.shortName || r.team.name);
+      const gd   = r.goalDifference > 0 ? `+${r.goalDifference}` : r.goalDifference;
+      return `<tr${i<2?' class="q"':''}><td>${name}</td><td>${r.playedGames}</td><td>${r.won}</td><td>${r.draw}</td><td>${r.lost}</td><td>${gd}</td><td>${r.points}</td></tr>`;
+    }).join('');
+    return `<div class="stnd-card">
+      <div class="stnd-card-hd">Group ${letter}${done ? ' <span class="badge">Final</span>' : ''}</div>
+      <table class="stnd-tbl">
+        <thead><tr><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>

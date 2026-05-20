@@ -38,24 +38,27 @@ jobs:
           fi
 
       - name: Write config
-        # Optional secrets — all fall back to the defaults in config.example.js if not set.
-        # PRIMARY_COLOR: hex color e.g. #0c3ff7
-        # LOGO_URL:      URL or relative path to logo image e.g. ./assets/wedigitek.png
-        # FAVICON_URL:   URL or relative path to favicon e.g. ./assets/favicon.ico
+        # Optional secrets — branding + WC2026 betting feature.
+        # PRIMARY_COLOR:        hex colour e.g. #0c3ff7
+        # LOGO_URL:             URL or relative path to logo image
+        # FAVICON_URL:          URL or relative path to favicon
+        # GIST_ID:              GitHub Gist ID that stores WC2026 predictions (wc2026-bets.json)
+        # GIST_PAT:             GitHub PAT with gist scope — lets every team member save picks
+        # FOOTBALL_DATA_TOKEN:  football-data.org free-tier API token for live standings
         env:
           PRIMARY_COLOR: ${{ secrets.PRIMARY_COLOR }}
           LOGO_URL: ${{ secrets.LOGO_URL }}
           FAVICON_URL: ${{ secrets.FAVICON_URL }}
+          GIST_ID: ${{ secrets.GIST_ID }}
+          GIST_PAT: ${{ secrets.GIST_PAT }}
+          FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
         run: |
-          if [ -n "$PRIMARY_COLOR" ] || [ -n "$LOGO_URL" ] || [ -n "$FAVICON_URL" ]; then
-            COLOR="${PRIMARY_COLOR:-#0c3ff7}"
-            LOGO="${LOGO_URL:-./assets/wedigitek.png}"
-            FAVICON="${FAVICON_URL:-./assets/favicon.ico}"
-            echo "window.CONFIG = { primaryColor: \"${COLOR}\", logoUrl: \"${LOGO}\", faviconUrl: \"${FAVICON}\" };" > config.js
-            echo "config.js written from secrets."
-          else
-            echo "No config secrets set — config.example.js fallback will be used."
-          fi
+          printf 'window.CONFIG = { primaryColor: "%s", logoUrl: "%s", faviconUrl: "%s", gistId: "%s", gistPat: "%s", footballDataToken: "%s" };\n' \
+            "${PRIMARY_COLOR:-#0c3ff7}" \
+            "${LOGO_URL:-./assets/wedigitek.png}" \
+            "${FAVICON_URL:-./assets/favicon.ico}" \
+            "${GIST_ID}" "${GIST_PAT}" "${FOOTBALL_DATA_TOKEN}" > config.js
+          echo "config.js written."
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
