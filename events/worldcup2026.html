@@ -55,6 +55,9 @@
     /* Bets grid */
     .picks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
     .ac-wrap { position: relative; margin-top: 8px; }
+    .input-row { display: flex; align-items: center; gap: 6px; }
+    .input-flag { flex-shrink: 0; min-width: 20px; }
+    .input-flag img { display: block; border-radius: 2px; }
     .pick-input {
       width: 100%; padding: 5px 10px; box-sizing: border-box;
       border: 1.5px solid #ddd; border-radius: 6px;
@@ -66,7 +69,7 @@
       position: absolute; top: 100%; left: 0; right: 0; z-index: 200;
       background: white; border: 1.5px solid var(--cp);
       border-top: none; border-radius: 0 0 8px 8px;
-      max-height: 180px; overflow-y: auto;
+      max-height: 360px; overflow-y: auto;
       display: none; box-shadow: 0 4px 14px rgba(0,0,0,.18);
     }
     .ac-list.open { display: block; }
@@ -368,19 +371,21 @@ function renderBets() {
   grid.innerHTML = PARTICIPANTS.map(name => {
     const b = bets[name] || { team: '', locked: false, lost: false };
     const { cls, badge } = teamBadge(b.team);
-    const flag = b.team ? flagImg(b.team, 'team-flag') : '';
+    const flag = b.team ? flagImg(b.team, 'ac-flag') : '';
     const cardCls = ['pick-card', cls, b.lost ? 's-lost' : ''].filter(Boolean).join(' ');
     return `<div class="${cardCls}" id="card-${name}">
       <div class="pick-name">${name}</div>
-      <span id="flag-${name}">${flag}</span>
       <div class="ac-wrap">
-        <input type="text" class="pick-input" id="input-${name}"
-               value="${b.team}" placeholder="Pick a team…"
-               autocomplete="off" spellcheck="false"
-               ${b.locked ? 'disabled' : ''}
-               oninput="acFilter('${name}', this)"
-               onfocus="acFilter('${name}', this)"
-               onblur="acBlur('${name}')">
+        <div class="input-row">
+          <span id="flag-${name}" class="input-flag">${flag}</span>
+          <input type="text" class="pick-input" id="input-${name}"
+                 value="${b.team}" placeholder="Pick a team…"
+                 autocomplete="off" spellcheck="false"
+                 ${b.locked ? 'disabled' : ''}
+                 oninput="acFilter('${name}', this)"
+                 onfocus="acFilter('${name}', this)"
+                 onblur="acBlur('${name}')">
+        </div>
         <div class="ac-list" id="ac-list-${name}"></div>
       </div>
       <span class="pick-badge" style="${badge ? '' : 'visibility:hidden'}">${badge || '·'}</span>
@@ -400,8 +405,8 @@ function acFilter(name, input) {
   const q    = input.value.trim().toLowerCase();
   const list = document.getElementById(`ac-list-${name}`);
   const hits = q.length === 0
-    ? allTeams.slice(0, 20)
-    : allTeams.filter(t => t.toLowerCase().includes(q)).slice(0, 12);
+    ? allTeams
+    : allTeams.filter(t => t.toLowerCase().includes(q));
   if (!hits.length) { list.classList.remove('open'); return; }
   list.innerHTML = hits.map(t =>
     `<div class="ac-item" onmousedown="acSelect('${name}','${t.replace(/'/g, "\\'")}')">` +
@@ -446,7 +451,7 @@ function updateCardStatus(name) {
   const badgeEl = card.querySelector('.pick-badge');
   if (badgeEl) { badgeEl.textContent = badge || '·'; badgeEl.style.visibility = badge ? '' : 'hidden'; }
   const flagEl = document.getElementById(`flag-${name}`);
-  if (flagEl) flagEl.innerHTML = b.team ? flagImg(b.team, 'team-flag') : '';
+  if (flagEl) flagEl.innerHTML = b.team ? flagImg(b.team, 'ac-flag') : '';
   const input = document.getElementById(`input-${name}`);
   if (input) { input.value = b.team || ''; input.disabled = b.locked; }
   const lockBtn = document.getElementById(`lock-${name}`);
