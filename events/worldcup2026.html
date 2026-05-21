@@ -98,15 +98,20 @@
     }
     .ctrl-btn:hover { border-color: var(--cp); }
     .ctrl-btn.active { background: #fde8e8; border-color: #e74c3c; color: #c0392b; font-weight: 700; }
-    .pick-card.s-lost { border-color: #e74c3c !important; }
-    .pick-card.s-lost .pick-name { text-decoration: line-through; color: #aaa; }
-    .pick-card.s-lost .team-flag { filter: grayscale(1) opacity(.4); }
-    .pick-card.s-lost .pick-input { color: #bbb; }
+    .pick-card.s-lost { background: #fff0ee; border-color: #e07060 !important; }
+    .pick-card.s-lost .pick-name { text-decoration: line-through; color: #c0392b; }
+    .pick-card.s-lost .ac-flag { filter: grayscale(1) opacity(.4); }
+    .pick-card.s-lost .pick-input { color: #ccc; }
+    .pick-card.s-locked { background: #f6f6f6; border-color: #d0d0d0 !important; }
+    .pick-card.s-locked .pick-name { color: #999; }
+    .pick-card.s-locked .ac-flag { opacity: 0.5; }
     .pick-card {
       background: white; border-radius: 12px; padding: 14px 12px; text-align: center;
       border: 2px solid #eee; box-shadow: 0 1px 6px rgba(0,0,0,.06);
       transition: transform .15s, box-shadow .15s;
+      position: relative;
     }
+    .pick-card:focus-within { z-index: 10; }
     .pick-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.12); }
     .pick-name { font-size: 0.95rem; font-weight: 700; margin-bottom: 5px; }
     .pick-team { font-size: 0.82rem; color: #555; }
@@ -131,7 +136,8 @@
     .match-meta strong { display: block; color: #555; font-size: 0.78rem; margin-bottom: 2px; }
     .match-teams { flex: 1; }
     .match-row { display: flex; align-items: center; gap: 10px; padding: 2px 0; }
-    .match-team-name { flex: 1; font-size: 0.88rem; font-weight: 600; }
+    .match-team-name { flex: 1; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    .mf-flag { width: 16px; height: 12px; border-radius: 1px; flex-shrink: 0; }
     .match-team-name.winner { color: var(--cp); }
     .match-score { font-size: 1.05rem; font-weight: 800; min-width: 18px; text-align: center; }
     .match-pill { font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
@@ -232,7 +238,7 @@ const TLA_TO_ALPHA2 = {
   SEN:'sn', ZAF:'za', KOR:'kr', ESP:'es', SWE:'se', SUI:'ch', TUN:'tn',
   TUR:'tr', UKR:'ua', USA:'us', URU:'uy', URY:'uy', UZB:'uz', VEN:'ve',
   MLI:'ml', SRB:'rs', SVK:'sk', NLD:'nl', CHE:'ch', PRT:'pt', DEU:'de',
-  KSA:'sa', RSA:'za', PAR:'py',
+  KSA:'sa', RSA:'za', CUW:'cw', CUR:'cw', ANT:'cw',
 };
 
 let teamStatus  = {};
@@ -372,7 +378,7 @@ function renderBets() {
     const b = bets[name] || { team: '', locked: false, lost: false };
     const { cls, badge } = teamBadge(b.team);
     const flag = b.team ? flagImg(b.team, 'ac-flag') : '';
-    const cardCls = ['pick-card', cls, b.lost ? 's-lost' : ''].filter(Boolean).join(' ');
+    const cardCls = ['pick-card', cls, b.lost ? 's-lost' : '', b.locked ? 's-locked' : ''].filter(Boolean).join(' ');
     return `<div class="${cardCls}" id="card-${name}">
       <div class="pick-name">${name}</div>
       <div class="ac-wrap">
@@ -447,7 +453,7 @@ function updateCardStatus(name) {
   if (!card) return;
   const b = bets[name] || { team: '', locked: false, lost: false };
   const { cls, badge } = teamBadge(b.team);
-  card.className = ['pick-card', cls, b.lost ? 's-lost' : ''].filter(Boolean).join(' ');
+  card.className = ['pick-card', cls, b.lost ? 's-lost' : '', b.locked ? 's-locked' : ''].filter(Boolean).join(' ');
   const badgeEl = card.querySelector('.pick-badge');
   if (badgeEl) { badgeEl.textContent = badge || '·'; badgeEl.style.visibility = badge ? '' : 'hidden'; }
   const flagEl = document.getElementById(`flag-${name}`);
@@ -492,6 +498,8 @@ function matchGroup(label, matches) {
 function matchCard(m) {
   const home   = norm(m.homeTeam.shortName || m.homeTeam.name || '?');
   const away   = norm(m.awayTeam.shortName || m.awayTeam.name || '?');
+  const homeF  = flagImg(home, 'mf-flag');
+  const awayF  = flagImg(away, 'mf-flag');
   const hs     = m.score?.fullTime?.home;
   const as_    = m.score?.fullTime?.away;
   const hasSc  = hs !== null && hs !== undefined;
@@ -509,11 +517,11 @@ function matchCard(m) {
     <div class="match-meta"><strong>${stage}</strong>${day}</div>
     <div class="match-teams">
       <div class="match-row">
-        <span class="match-team-name${win==='HOME_TEAM'?' winner':''}">${home}</span>
+        <span class="match-team-name${win==='HOME_TEAM'?' winner':''}">${homeF}${home}</span>
         <span class="match-score">${hasSc ? hs : ''}</span>
       </div>
       <div class="match-row">
-        <span class="match-team-name${win==='AWAY_TEAM'?' winner':''}">${away}</span>
+        <span class="match-team-name${win==='AWAY_TEAM'?' winner':''}">${awayF}${away}</span>
         <span class="match-score">${hasSc ? as_ : ''}</span>
       </div>
     </div>
