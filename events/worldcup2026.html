@@ -86,6 +86,19 @@
     .save-dot.saving { background: #f0ad4e; }
     .save-dot.saved  { background: #27ae60; }
     .save-dot.error  { background: #e74c3c; }
+    .pick-input:disabled { background: #f0f0f0; color: #aaa; cursor: not-allowed; }
+    .card-controls { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+    .ctrl-btn {
+      background: none; border: 1.5px solid #e0e0e0; border-radius: 6px;
+      padding: 2px 8px; cursor: pointer; font-size: 0.78rem; line-height: 1.7;
+      transition: border-color .15s, background .15s;
+    }
+    .ctrl-btn:hover { border-color: var(--cp); }
+    .ctrl-btn.active { background: #fde8e8; border-color: #e74c3c; color: #c0392b; font-weight: 700; }
+    .pick-card.s-lost { border-color: #e74c3c !important; }
+    .pick-card.s-lost .pick-name { text-decoration: line-through; color: #aaa; }
+    .pick-card.s-lost .team-flag { filter: grayscale(1) opacity(.4); }
+    .pick-card.s-lost .pick-input { color: #bbb; }
     .pick-card {
       background: white; border-radius: 12px; padding: 14px 12px; text-align: center;
       border: 2px solid #eee; box-shadow: 0 1px 6px rgba(0,0,0,.06);
@@ -231,12 +244,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Gist ──────────────────────────────────────────────────────────────────────
 
-async function saveBet(name, team) {
+// Parse bet entry — handles legacy string format and new object format
+function parseBetVal(v) {
+  if (typeof v === 'string') return { team: v, locked: false, lost: false };
+  return { team: v.team || '', locked: !!v.locked, lost: !!v.lost };
+}
+
+async function saveBet(name, update) {
   const cfg    = window.CONFIG || {};
   const gistId = cfg.gistId;
   const pat    = cfg.gistPat;
-  if (team) bets[name] = team; else delete bets[name];
-  updateCardStatus(name, team);
+  if (!bets[name]) bets[name] = { team: '', locked: false, lost: false };
+  Object.assign(bets[name], update);
+  updateCardStatus(name);
   if (!gistId || !pat) { setDot(name, 'error'); return; }
   try {
     const r = await fetch(`https://api.github.com/gists/${gistId}`, {
@@ -267,9 +287,14 @@ async function loadAll() {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const gist = await r.json();
 
-    // Bets
+    // Bets (normalize legacy string values to {team,locked,lost} objects)
     const betsFile = gist.files[GIST_FILE];
-    if (betsFile && betsFile.content) { bets = JSON.parse(betsFile.content); renderBets(); }
+    if (betsFile && betsFile.content) {
+      const raw = JSON.parse(betsFile.content);
+      bets = {};
+      Object.entries(raw).forEach(([k, v]) => { bets[k] = parseBetVal(v); });
+      renderBets();
+    }
 
     // Match data cached by the scheduled GitHub Actions workflow
     const dataFile = gist.files['wc2026-data.json'];
@@ -341,22 +366,30 @@ function flagImg(team, cls) {
 function renderBets() {
   const grid = document.getElementById('picksGrid');
   grid.innerHTML = PARTICIPANTS.map(name => {
-    const team = bets[name] || '';
-    const { cls, badge } = teamBadge(team);
-    const flag = team ? flagImg(team, 'team-flag') : '';
-    return `<div class="pick-card ${cls}" id="card-${name}">
+    const b = bets[name] || { team: '', locked: false, lost: false };
+    const { cls, badge } = teamBadge(b.team);
+    const flag = b.team ? flagImg(b.team, 'team-flag') : '';
+    const cardCls = ['pick-card', cls, b.lost ? 's-lost' : ''].filter(Boolean).join(' ');
+    return `<div class="${cardCls}" id="card-${name}">
       <div class="pick-name">${name}</div>
       <span id="flag-${name}">${flag}</span>
       <div class="ac-wrap">
         <input type="text" class="pick-input" id="input-${name}"
-               value="${team}" placeholder="Pick a team…"
+               value="${b.team}" placeholder="Pick a team…"
                autocomplete="off" spellcheck="false"
+               ${b.locked ? 'disabled' : ''}
                oninput="acFilter('${name}', this)"
                onfocus="acFilter('${name}', this)"
                onblur="acBlur('${name}')">
         <div class="ac-list" id="ac-list-${name}"></div>
       </div>
       <span class="pick-badge" style="${badge ? '' : 'visibility:hidden'}">${badge || '·'}</span>
+      <div class="card-controls">
+        <button class="ctrl-btn" id="lock-${name}" onclick="toggleLock('${name}')"
+                title="${b.locked ? 'Unlock' : 'Lock'} bet">${b.locked ? '🔒' : '🔓'}</button>
+        <button class="ctrl-btn${b.lost ? ' active' : ''}" id="lost-${name}" onclick="toggleLost('${name}')"
+                title="Mark bet as lost">✕</button>
+      </div>
       <span class="save-dot" id="dot-${name}"></span>
     </div>`;
   }).join('');
@@ -385,23 +418,41 @@ function acBlur(name) {
 }
 
 function acSelect(name, team) {
+  if (bets[name]?.locked) return;
   const input = document.getElementById(`input-${name}`);
   if (input) input.value = team;
   const list  = document.getElementById(`ac-list-${name}`);
   if (list) list.classList.remove('open');
   setDot(name, 'saving');
-  saveBet(name, team);
+  saveBet(name, { team });
 }
 
-function updateCardStatus(name, team) {
+function toggleLock(name) {
+  if (!bets[name]) bets[name] = { team: '', locked: false, lost: false };
+  saveBet(name, { locked: !bets[name].locked });
+}
+
+function toggleLost(name) {
+  if (!bets[name]) bets[name] = { team: '', locked: false, lost: false };
+  saveBet(name, { lost: !bets[name].lost });
+}
+
+function updateCardStatus(name) {
   const card = document.getElementById(`card-${name}`);
   if (!card) return;
-  const { cls, badge } = teamBadge(team);
-  card.className = `pick-card${cls ? ' ' + cls : ''}`;
-  const b = card.querySelector('.pick-badge');
-  if (b) { b.textContent = badge || '·'; b.style.visibility = badge ? '' : 'hidden'; }
-  const f = document.getElementById(`flag-${name}`);
-  if (f) f.innerHTML = team ? flagImg(team, 'team-flag') : '';
+  const b = bets[name] || { team: '', locked: false, lost: false };
+  const { cls, badge } = teamBadge(b.team);
+  card.className = ['pick-card', cls, b.lost ? 's-lost' : ''].filter(Boolean).join(' ');
+  const badgeEl = card.querySelector('.pick-badge');
+  if (badgeEl) { badgeEl.textContent = badge || '·'; badgeEl.style.visibility = badge ? '' : 'hidden'; }
+  const flagEl = document.getElementById(`flag-${name}`);
+  if (flagEl) flagEl.innerHTML = b.team ? flagImg(b.team, 'team-flag') : '';
+  const input = document.getElementById(`input-${name}`);
+  if (input) { input.value = b.team || ''; input.disabled = b.locked; }
+  const lockBtn = document.getElementById(`lock-${name}`);
+  if (lockBtn) { lockBtn.textContent = b.locked ? '🔒' : '🔓'; lockBtn.title = (b.locked ? 'Unlock' : 'Lock') + ' bet'; }
+  const lostBtn = document.getElementById(`lost-${name}`);
+  if (lostBtn) lostBtn.classList.toggle('active', b.lost);
 }
 
 function setDot(name, state) {
