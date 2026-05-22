@@ -162,23 +162,14 @@
       font-family: system-ui, -apple-system, sans-serif;
       font-size: 1rem;
       font-weight: 800;
-      color: #1a1a1a;
-      background: linear-gradient(135deg, #f5c518, #ff8c00, #f5c518);
-      background-size: 300% 300%;
+      color: #888;
+      background: #e0e0e0;
       border-radius: 10px;
-      animation: wcGradient 2.5s ease infinite, wcPulse 2s ease-in-out infinite;
-      box-shadow: 0 0 18px rgba(245,197,24,0.65);
-      border: 2px solid rgba(255,255,255,0.4);
+      box-shadow: none;
+      border: 2px solid #ccc;
       letter-spacing: 0.02em;
-    }
-    @keyframes wcGradient {
-      0%   { background-position: 0% 50%; }
-      50%  { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    @keyframes wcPulse {
-      0%, 100% { transform: scale(1);    box-shadow: 0 0 18px rgba(245,197,24,0.65); }
-      50%       { transform: scale(1.07); box-shadow: 0 0 30px rgba(245,197,24,0.95); }
+      pointer-events: none;
+      opacity: 0.55;
     }
   </style>
 </head>
