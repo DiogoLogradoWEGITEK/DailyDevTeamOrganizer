@@ -150,6 +150,65 @@
       height: 32px;
       width: auto;
     }
+    @media (max-width: 1330px) { .code-bubble { display: none !important; } }
+    .code-bubble {
+      position: fixed;
+      right: 80px;
+      top: 50%;
+      transform: translateY(-50%) translateX(24px);
+      z-index: 1;
+      background: #1e1e1e;
+      border-radius: 10px;
+      padding: 14px 18px 18px;
+      box-shadow: 0 8px 36px rgba(0,0,0,0.38);
+      width: 380px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .code-bubble.visible {
+      opacity: 1;
+      transform: translateY(-50%) translateX(0);
+      pointer-events: auto;
+    }
+    .vsc-chrome {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #333;
+    }
+    .vsc-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+    .vsc-dot.r { background: #ff5f57; }
+    .vsc-dot.y { background: #febc2e; }
+    .vsc-dot.g { background: #28c840; }
+    .vsc-tab {
+      margin-left: 8px;
+      color: #8b8b8b;
+      font-size: 0.72rem;
+      font-family: 'Consolas', monospace;
+    }
+    .code-block {
+      margin: 0;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+      font-size: 0.8rem;
+      line-height: 1.65;
+      color: #d4d4d4;
+      background: none;
+      border: none;
+      padding: 0;
+      white-space: pre;
+      text-align: left;
+    }
+    .hl-cm { color: #6a9955; }
+    .hl-kw { color: #569cd6; }
+    .hl-fn { color: #dcdcaa; }
+    .hl-pm { color: #9cdcfe; }
+    .hl-va { color: #9cdcfe; }
+    .hl-pp { color: #9cdcfe; }
+    .hl-nu { color: #b5cea8; }
+    .hl-mt { color: #4ec9b0; }
 
   </style>
 </head>
@@ -161,6 +220,23 @@
 
   <button id="startBtn" onclick="startSession()"></button>
   <ul id="nameList" style="display:none;"></ul>
+
+  <div class="code-bubble" id="codeBubble">
+    <div class="vsc-chrome">
+      <span class="vsc-dot r"></span>
+      <span class="vsc-dot y"></span>
+      <span class="vsc-dot g"></span>
+      <span class="vsc-tab">shuffle.js</span>
+    </div>
+    <pre class="code-block"><code><span class="hl-cm">// Fisher-Yates (Knuth) Shuffle</span>
+<span class="hl-cm">// not rigged</span>
+<span class="hl-kw">function</span> <span class="hl-fn">shuffle</span>(<span class="hl-pm">array</span>) {
+  <span class="hl-kw">for</span> (<span class="hl-kw">let</span> <span class="hl-va">i</span> = <span class="hl-pm">array</span>.<span class="hl-pp">length</span> - <span class="hl-nu">1</span>; <span class="hl-va">i</span> &gt; <span class="hl-nu">0</span>; <span class="hl-va">i</span>--) {
+    <span class="hl-kw">const</span> <span class="hl-va">j</span> = <span class="hl-mt">Math</span>.<span class="hl-fn">floor</span>(<span class="hl-mt">Math</span>.<span class="hl-fn">random</span>() * (<span class="hl-va">i</span> + <span class="hl-nu">1</span>));
+    [<span class="hl-pm">array</span>[<span class="hl-va">i</span>], <span class="hl-pm">array</span>[<span class="hl-va">j</span>]] = [<span class="hl-pm">array</span>[<span class="hl-va">j</span>], <span class="hl-pm">array</span>[<span class="hl-va">i</span>]];
+  }
+}</code></pre>
+  </div>
 
   <script src="participants.js"></script>
   <script src="participants.example.js"></script>
@@ -259,6 +335,7 @@
       listEl.style.display = "block";
       startTimer();
       document.getElementById("startBtn").textContent = t.reroll;
+      document.getElementById("codeBubble").classList.add("visible");
     }
   </script>
 
