@@ -415,9 +415,10 @@
     function showPRBranches(li, name) {
       hidePRBranches();
       const prs = prData && prData[name];
+      console.log('[PR] hover', name, 'prs:', prs, 'left:', li.getBoundingClientRect().left);
       if (!prs || !prs.length) return;
       const rect = li.getBoundingClientRect();
-      if (rect.left < 240) return; // not enough room on screen
+      if (rect.left < 240) { console.log('[PR] bailed: rect.left too small', rect.left); return; }
 
       const liCY      = rect.top + rect.height / 2;
       const cardW     = 200;
@@ -470,6 +471,8 @@
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
   </script>
+
+  <div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);font-size:0.65rem;opacity:0.35;font-family:monospace;pointer-events:none;z-index:9999">v2026-06-09.4</div>
 
 </body>
 </html>
