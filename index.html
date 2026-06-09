@@ -336,11 +336,8 @@
         li.textContent = name;
         li.setAttribute("draggable", "true");
         addDragAndDropHandlers(li);
-        const p = participantByName[name];
-        if (p && p.github) {
-          li.addEventListener('mouseenter', () => showPRBranches(li, name));
-          li.addEventListener('mouseleave', hidePRBranches);
-        }
+        li.addEventListener('mouseenter', () => showPRBranches(li, name));
+        li.addEventListener('mouseleave', hidePRBranches);
         listEl.appendChild(li);
       });
     }
@@ -437,7 +434,7 @@
     }
   </script>
 
-  <div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);font-size:0.65rem;opacity:0.35;font-family:monospace;pointer-events:none;z-index:9999">v2026-06-09.6</div>
+  <div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);font-size:0.65rem;opacity:0.35;font-family:monospace;pointer-events:none;z-index:9999">v2026-06-09.7</div>
 
 </body>
 </html>
