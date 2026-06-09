@@ -418,48 +418,15 @@
       if (!prs || !prs.length) return;
       const rect = li.getBoundingClientRect();
 
-      const liCY      = rect.top + rect.height / 2;
-      const cardW     = 200;
-      const cardH     = 46;
-      const gap       = 10;
-      const cardRight = rect.left - 60;
-      const spineX    = rect.left - 50;
-      const n         = prs.length;
-      const totalH    = n * cardH + (n - 1) * gap;
-      const startY    = liCY - totalH / 2;
-      const cardCYs   = prs.map((_, i) => startY + i * (cardH + gap) + cardH / 2);
-
       const overlay = document.createElement('div');
-      overlay.className = 'pr-overlay';
       overlay.id = 'prOverlay';
+      overlay.style.cssText = `position:fixed;top:${rect.top}px;left:${rect.left - 250}px;background:#fff;border:1px solid #ccc;padding:8px 12px;border-radius:6px;font-size:0.8rem;z-index:9999;max-width:230px;`;
 
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('class', 'pr-lines');
-      const color = getComputedStyle(document.documentElement).getPropertyValue('--cp').trim();
-
-      function mkLine(x1, y1, x2, y2) {
-        const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        l.setAttribute('x1', x1); l.setAttribute('y1', y1);
-        l.setAttribute('x2', x2); l.setAttribute('y2', y2);
-        l.setAttribute('stroke', color);
-        l.setAttribute('stroke-width', '2');
-        l.setAttribute('opacity', '0.45');
-        return l;
-      }
-
-      svg.appendChild(mkLine(rect.left, liCY, spineX, liCY));           // trunk
-      if (n > 1) svg.appendChild(mkLine(spineX, cardCYs[0], spineX, cardCYs[n - 1])); // spine
-      cardCYs.forEach(cy => svg.appendChild(mkLine(spineX, cy, cardRight, cy)));       // branches
-      overlay.appendChild(svg);
-
-      prs.forEach((pr, i) => {
-        const card = document.createElement('div');
-        card.className = 'pr-branch-card';
-        card.style.left = `${cardRight - cardW}px`;
-        card.style.top  = `${startY + i * (cardH + gap)}px`;
-        card.style.animationDelay = `${i * 0.07}s`;
-        card.innerHTML = `<span class="pr-num">#${pr.number}</span>${escapeHtml(pr.title)}`;
-        overlay.appendChild(card);
+      prs.forEach(pr => {
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        row.textContent = `#${pr.number} ${pr.title}`;
+        overlay.appendChild(row);
       });
 
       document.body.appendChild(overlay);
@@ -470,7 +437,7 @@
     }
   </script>
 
-  <div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);font-size:0.65rem;opacity:0.35;font-family:monospace;pointer-events:none;z-index:9999">v2026-06-09.5</div>
+  <div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);font-size:0.65rem;opacity:0.35;font-family:monospace;pointer-events:none;z-index:9999">v2026-06-09.6</div>
 
 </body>
 </html>
