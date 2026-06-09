@@ -304,6 +304,7 @@
     const names = participants.map(p => p.name);
     const participantByName = Object.fromEntries(participants.map(p => [p.name, p]));
     let prData = null;
+    window.__prData = () => prData; // debug helper
 
     const listEl = document.getElementById("nameList");
 
@@ -402,8 +403,8 @@
         if (!r.ok) return;
         const gist = await r.json();
         const file = gist.files['pr-data.json'];
-        if (file) prData = JSON.parse(file.content);
-      } catch (e) { /* degrade silently — no PR branches shown */ }
+        if (file) { prData = JSON.parse(file.content); console.log('[PR] data loaded', Object.keys(prData)); }
+      } catch (e) { console.warn('[PR] loadPRData failed', e); }
     }
 
     function hidePRBranches() {
@@ -416,7 +417,7 @@
       const prs = prData && prData[name];
       if (!prs || !prs.length) return;
       const rect = li.getBoundingClientRect();
-      if (rect.left < 280) return; // not enough room on screen
+      if (rect.left < 240) return; // not enough room on screen
 
       const liCY      = rect.top + rect.height / 2;
       const cardW     = 200;
