@@ -2,8 +2,8 @@
 // if the real file wasn't available (e.g. on GitHub Pages without Actions injection).
 if (!window.PARTICIPANTS) {
   window.PARTICIPANTS = [
-    "Alice",
-    "Bob",
-    "Carol"
+    { name: "Alice", github: "alice-dev" },
+    { name: "Bob",   github: "bob-dev" },
+    { name: "Carol", github: "carol-dev" }
   ];
 }
