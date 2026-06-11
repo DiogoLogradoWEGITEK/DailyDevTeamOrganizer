@@ -60,6 +60,12 @@ jobs:
             "${GIST_ID}" "${GIST_PAT}" "${FOOTBALL_DATA_TOKEN}" > config.js
           echo "config.js written."
 
+      - name: Inject version
+        run: |
+          VERSION="$(git rev-parse --short HEAD)"
+          sed -i "s/__VERSION__/${VERSION}/g" index.html
+          echo "Version set to ${VERSION}"
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
