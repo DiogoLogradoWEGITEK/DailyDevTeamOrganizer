@@ -44,7 +44,7 @@ jobs:
               -H "Authorization: token $GH_TOKEN" \
               -H "Accept: application/vnd.github.v3+json" \
               "https://api.github.com/search/issues?q=${ENCODED}&per_page=3&sort=created&order=desc" \
-            | jq '[.items[] | {title: .title, number: .number}]' \
+            | jq '[.items[] | {title: .title, number: .number, repo: (.repository_url | split("/") | last)}]' \
             > "/tmp/prs/${i}.json" || echo "[]" > "/tmp/prs/${i}.json"
 
             sleep 2 # stay within search rate limit (30 req/min authenticated)

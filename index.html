@@ -455,7 +455,7 @@
         card.style.left = `${cardRight - cardW}px`;
         card.style.top  = `${startY + i * (cardH + gap)}px`;
         card.style.animationDelay = `${i * 0.07}s`;
-        card.innerHTML = `<span class="pr-num">#${pr.number}</span>${escapeHtml(pr.title)}`;
+        card.innerHTML = `<span class="pr-num">${escapeHtml(pr.repo || '')} #${pr.number}</span>${escapeHtml(pr.title)}`;
         overlay.appendChild(card);
       });
 
@@ -467,7 +467,7 @@
     }
   </script>
 
-  <div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);font-size:0.65rem;opacity:0.35;font-family:monospace;pointer-events:none;z-index:9999">v2026-06-09.8</div>
+  <div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);font-size:0.65rem;opacity:0.35;font-family:monospace;pointer-events:none;z-index:9999">v2026-06-11.1</div>
 
 </body>
 </html>
