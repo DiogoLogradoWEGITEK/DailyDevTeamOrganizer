@@ -197,9 +197,9 @@
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
-// PARTICIPANTS — edit this list to add/remove people from the bet pool
+// PARTICIPANTS — loaded from the shared window.PARTICIPANTS secret
 // ─────────────────────────────────────────────────────────────────────────────
-const PARTICIPANTS = ['Diogo', 'Cleiton', 'Guilherme', 'Hudson', 'Miguel', 'Wictor', 'Edcarlos', 'João'];
+const PARTICIPANTS = (window.PARTICIPANTS || []).map(p => typeof p === 'string' ? p : p.name);
 const GIST_FILE    = 'wc2026-bets.json';
 
 // Fallback team list used before the API responds

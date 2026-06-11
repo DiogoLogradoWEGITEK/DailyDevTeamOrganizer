@@ -7,7 +7,7 @@ on:
 
 # Required secrets:
 #   PARTICIPANT_HANDLES — JSON array of {name, github} objects, e.g.:
-#                         [{"name":"Diogo","github":"DiogoHandle"},{"name":"Cleiton","github":"CleitonHandle"}]
+#                         [{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":"bob-gh"}]
 #   GH_TOKEN            — PAT with `repo` read scope (to search PRs in private repos)
 #   GIST_ID             — Gist ID where results are cached (same Gist as wc2026-data.json)
 #   GIST_PAT            — PAT with `gist` write scope
