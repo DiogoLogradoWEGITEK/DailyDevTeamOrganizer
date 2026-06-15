@@ -223,28 +223,42 @@
     }
     .pr-branch-card {
       position: absolute;
-      width: 200px;
-      padding: 7px 11px;
+      width: 240px;
+      padding: 8px 12px;
       background: #fff;
       border-radius: 8px;
       border-left: 4px solid var(--cp);
       box-shadow: 0 2px 10px rgba(0,0,0,0.12);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #222;
+      line-height: 1.4;
+      animation: pr-card-in 0.22s ease both;
+      overflow: hidden;
+    }
+    .pr-branch-card .pr-repo {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--cp);
+      text-transform: lowercase;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      line-height: 1.3;
-      animation: pr-card-in 0.22s ease both;
+      margin-bottom: 2px;
+    }
+    .pr-branch-card .pr-title {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #333;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .pr-branch-card .pr-num {
-      display: block;
       font-size: 0.68rem;
-      font-weight: 500;
-      color: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.65);
-      margin-bottom: 2px;
+      font-weight: 700;
+      color: #888;
+      margin-right: 5px;
     }
     .pr-lines {
       position: absolute;
@@ -382,8 +396,10 @@
       }
     }
 
+    // Kick off PR data fetch in background immediately — ready before first hover
+    loadPRData();
+
     async function startSession() {
-      if (!prData) await loadPRData();
       shuffle(names);
       displayNames(names);
       listEl.style.display = "block";
@@ -416,7 +432,7 @@
       const rect = li.getBoundingClientRect();
 
       const liCY      = rect.top + rect.height / 2;
-      const cardW     = 200;
+      const cardW     = 240;
       const cardH     = 46;
       const gap       = 10;
       const cardRight = rect.left - 50;
@@ -455,7 +471,7 @@
         card.style.left = `${cardRight - cardW}px`;
         card.style.top  = `${startY + i * (cardH + gap)}px`;
         card.style.animationDelay = `${i * 0.07}s`;
-        card.innerHTML = `<span class="pr-num">${escapeHtml(pr.repo || '')} #${pr.number}</span>${escapeHtml(pr.title)}`;
+        card.innerHTML = `<span class="pr-repo">${escapeHtml(pr.repo || '')}</span><span class="pr-title"><span class="pr-num">#${pr.number}</span>${escapeHtml(pr.title)}</span>`;
         overlay.appendChild(card);
       });
 

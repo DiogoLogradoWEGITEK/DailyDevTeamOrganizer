@@ -2,7 +2,7 @@ name: Fetch PR Data
 
 on:
   schedule:
-    - cron: "0 13 * * 1-5" # 13:00 UTC = 14:00 WEST (Portugal summer) — 1 h before the 15:00 standup
+    - cron: "0 11 * * 1-5" # 11:00 UTC = 12:00 WEST (Portugal summer) — 3 h before the 15:00 standup
   workflow_dispatch: # allow manual trigger
 
 # Required secrets:
