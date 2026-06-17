@@ -2,7 +2,7 @@ name: Fetch WC 2026 Data
 
 on:
   schedule:
-    - cron: "0 13 * * *" # 13:00 UTC = 14:00 WEST (Portugal summer) — 1 h before the 15:00 meeting
+    - cron: "47 5 * * *" # 05:47 UTC — quiet window, data ready well before the 15:00 Portugal standup
   workflow_dispatch: # allow manual trigger
 
 jobs:
