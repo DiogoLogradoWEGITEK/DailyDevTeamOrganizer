@@ -75,10 +75,8 @@ jobs:
 
           echo "Done — PR data cached at $(date -u)"
 
-          # Print formatted summary for the Actions log
-          echo ""
-          echo "──────────────────────────────────────────"
-          echo "  PR Fetch Summary"
+      - name: PR Fetch Summary
+        run: |
           echo "──────────────────────────────────────────"
           node -e "
             const fs = require('fs');
