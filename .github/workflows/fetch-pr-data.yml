@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Fetch recent PRs for each participant and cache to Gist
         run: |
-          SEVEN_DAYS_AGO=$(date -d '7 days ago' +%Y-%m-%d)
+          FOURTEEN_DAYS_AGO=$(date -d '14 days ago' +%Y-%m-%d)
           COUNT=$(echo "$PARTICIPANT_HANDLES" | jq 'length')
 
           mkdir -p /tmp/prs
@@ -37,7 +37,7 @@ jobs:
             fi
 
             # Search PRs authored by this person across both orgs in the last 7 days
-            export SEARCH_QUERY="is:pr author:${GITHUB} org:wedigitek org:WECAMPUS-io created:>=${SEVEN_DAYS_AGO}"
+            export SEARCH_QUERY="is:pr is:merged author:${GITHUB} org:wedigitek org:WECAMPUS-io merged:>=${FOURTEEN_DAYS_AGO}"
             ENCODED=$(python3 -c "import urllib.parse,os; print(urllib.parse.quote(os.environ['SEARCH_QUERY']))")
 
             curl -sf \
