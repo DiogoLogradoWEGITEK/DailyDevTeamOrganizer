@@ -1,9 +1,7 @@
 name: Fetch WC 2026 Data
 
 on:
-  schedule:
-    - cron: "47 5 * * *" # 05:47 UTC — quiet window, data ready well before the 15:00 Portugal standup
-  workflow_dispatch: # allow manual trigger
+  workflow_dispatch: # schedule disabled — re-add cron when WC 2026 starts
 
 jobs:
   fetch-data:
