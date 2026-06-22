@@ -8,6 +8,8 @@ on:
 # Required secrets:
 #   PARTICIPANTS_JSON   — JSON array of {name, github} objects (shared with deploy.yml)
 #                         e.g.: [{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":"bob-gh"}]
+#   GH_SEARCH_SCOPE     — GitHub search scope, space-separated. Supports orgs and/or repos:
+#                         e.g.: "org:my-org" or "org:my-org org:another-org" or "repo:owner/repo1 repo:owner/repo2"
 #   GH_TOKEN            — PAT with `repo` read scope (to search PRs in private repos)
 #   GIST_ID             — Gist ID where results are cached (same Gist as wc2026-data.json)
 #   GIST_PAT            — PAT with `gist` write scope
@@ -17,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PARTICIPANTS_JSON: ${{ secrets.PARTICIPANTS_JSON }}
+      GH_SEARCH_SCOPE: ${{ secrets.GH_SEARCH_SCOPE }}
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
       GIST_ID: ${{ secrets.GIST_ID }}
       GIST_PAT: ${{ secrets.GIST_PAT }}
@@ -36,8 +39,8 @@ jobs:
               continue
             fi
 
-            # Search PRs authored by this person across both orgs in the last 7 days
-            export SEARCH_QUERY="is:pr is:merged author:${GITHUB} org:wedigitek org:WECAMPUS-io merged:>=${FOURTEEN_DAYS_AGO}"
+            # Search PRs authored by this person within the configured scope in the last 14 days
+            export SEARCH_QUERY="is:pr is:merged author:${GITHUB} ${GH_SEARCH_SCOPE} merged:>=${FOURTEEN_DAYS_AGO}"
             ENCODED=$(python3 -c "import urllib.parse,os; print(urllib.parse.quote(os.environ['SEARCH_QUERY']))")
 
             curl -sf \
