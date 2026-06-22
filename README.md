@@ -8,7 +8,7 @@ A lightweight GitHub Pages tool for daily standups. Shuffles participants, shows
 - Live session timer
 - Drag-and-drop reordering after shuffle
 - VS Code-styled code bubble showing the shuffle algorithm
-- **PR branch hover** — hover a participant name to see their last 7 days of PRs, displayed as branching cards to the left of the list (pre-fetched daily by a scheduled workflow)
+- **PR branch hover** — hover a participant name to see their recent merged PRs, displayed as branching cards to the left of the list (pre-fetched daily by a scheduled workflow)
 
 ## Configuring participants
 
@@ -33,29 +33,30 @@ The `github` field is used by the PR hover feature. Set it to `null` to disable 
 
 ## Secrets
 
-All sensitive config is kept in GitHub Actions secrets:
+All sensitive config is kept in GitHub Actions secrets (**Settings → Secrets and variables → Actions**):
 
-| Secret              | Description                                                                           |
-| ------------------- | ------------------------------------------------------------------------------------- |
-| `PARTICIPANTS_JSON` | JSON array of `{name, github}` objects — injected as `participants.js` at deploy time |
-| `PRIMARY_COLOR`     | Hex colour for the theme (e.g. `#0c3ff7`)                                             |
-| `LOGO_URL`          | URL or path to the logo image                                                         |
-| `FAVICON_URL`       | URL or path to the favicon                                                            |
-| `GIST_ID`           | GitHub Gist ID used to cache pre-fetched data                                         |
-| `GIST_PAT`          | PAT with `gist` write scope                                                           |
-| `GH_TOKEN`          | PAT with `repo` read scope — used by the PR fetch workflow to search private repos    |
+| Secret | Description | Example |
+|---|---|---|
+| `PARTICIPANTS_JSON` | JSON array of `{name, github}` objects — injected as `participants.js` at deploy time | `[{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":null}]` |
+| `PRIMARY_COLOR` | Hex colour for the theme | `#0c3ff7` |
+| `FAVICON_URL` | URL or relative path to the favicon | `./assets/favicon.ico` |
+| `GIST_ID` | ID of the GitHub Gist used to cache pre-fetched data (the hash in the Gist URL) | `a1b2c3d4e5f6...` |
+| `GIST_PAT` | PAT with `gist` write scope — lets the workflows update the Gist | `github_pat_...` |
+| `GH_TOKEN` | PAT with `repo` read scope — used to search merged PRs in private org repos | `ghp_...` |
+| `FOOTBALL_DATA_TOKEN` | football-data.org API token — only needed when the WC page is re-enabled | `abc123...` |
 
 ## PR hover feature
 
-A scheduled workflow (`.github/workflows/fetch-pr-data.yml`) runs Monday–Friday at 13:00 UTC (1 hour before the 15:00 Portugal standup). It queries the GitHub Search API for each participant's PRs opened in the last 7 days across `org:wedigitek` and `org:WECAMPUS-io`, then saves the result as `pr-data.json` in the Gist.
+A scheduled workflow (`.github/workflows/fetch-pr-data.yml`) runs Monday–Friday at 05:23 UTC. It queries the GitHub Search API for each participant's **merged** PRs from the last 14 days across your configured GitHub organisations, then saves the result as `pr-data.json` in the Gist.
 
-The page fetches `pr-data.json` when the session starts. Hovering a name draws SVG branch lines to the left with up to 3 PR cards showing the repo name, PR number, and title.
+The page fetches `pr-data.json` silently on load. Hovering a name draws SVG branch lines to the left with up to 3 PR cards showing the repo name, PR number, and title.
 
 To trigger it manually: **Actions → Fetch PR Data → Run workflow**.
 
 ## Workflows
 
-| Workflow            | Schedule          | Purpose                                                                        |
-| ------------------- | ----------------- | ------------------------------------------------------------------------------ |
-| `deploy.yml`        | On push to `main` | Builds and deploys to GitHub Pages, injects secrets, stamps git SHA as version |
-| `fetch-pr-data.yml` | Mon–Fri 13:00 UTC | Pre-fetches recent PRs for each participant into the Gist                      |
+| Workflow | Schedule | Purpose |
+|---|---|---|
+| `deploy.yml` | On push to `main` | Builds and deploys to GitHub Pages, injects secrets, stamps git SHA as version |
+| `fetch-pr-data.yml` | Mon–Fri 05:23 UTC | Pre-fetches merged PRs for each participant into the Gist |
+| `fetch-wc-data.yml` | Disabled | WC 2026 data fetch — re-enable when the tournament starts |
