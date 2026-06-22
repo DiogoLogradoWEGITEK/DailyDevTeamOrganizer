@@ -6,8 +6,8 @@ on:
   workflow_dispatch: # allow manual trigger
 
 # Required secrets:
-#   PARTICIPANT_HANDLES — JSON array of {name, github} objects, e.g.:
-#                         [{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":"bob-gh"}]
+#   PARTICIPANTS_JSON   — JSON array of {name, github} objects (shared with deploy.yml)
+#                         e.g.: [{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":"bob-gh"}]
 #   GH_TOKEN            — PAT with `repo` read scope (to search PRs in private repos)
 #   GIST_ID             — Gist ID where results are cached (same Gist as wc2026-data.json)
 #   GIST_PAT            — PAT with `gist` write scope
@@ -16,7 +16,7 @@ jobs:
   fetch-prs:
     runs-on: ubuntu-latest
     env:
-      PARTICIPANT_HANDLES: ${{ secrets.PARTICIPANT_HANDLES }}
+      PARTICIPANTS_JSON: ${{ secrets.PARTICIPANTS_JSON }}
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
       GIST_ID: ${{ secrets.GIST_ID }}
       GIST_PAT: ${{ secrets.GIST_PAT }}
@@ -24,12 +24,12 @@ jobs:
       - name: Fetch recent PRs for each participant and cache to Gist
         run: |
           FOURTEEN_DAYS_AGO=$(date -d '14 days ago' +%Y-%m-%d)
-          COUNT=$(echo "$PARTICIPANT_HANDLES" | jq 'length')
+          COUNT=$(echo "$PARTICIPANTS_JSON" | jq 'length')
 
           mkdir -p /tmp/prs
 
           for i in $(seq 0 $((COUNT - 1))); do
-            GITHUB=$(echo "$PARTICIPANT_HANDLES" | jq -r ".[$i].github")
+            GITHUB=$(echo "$PARTICIPANTS_JSON" | jq -r ".[$i].github")
 
             if [ "$GITHUB" = "null" ] || [ -z "$GITHUB" ]; then
               echo "[]" > "/tmp/prs/${i}.json"
@@ -53,7 +53,7 @@ jobs:
           # Merge all results into {name: [{title, number}], updatedAt: "..."}
           node -e "
             const fs = require('fs');
-            const handles = JSON.parse(process.env.PARTICIPANT_HANDLES);
+            const handles = JSON.parse(process.env.PARTICIPANTS_JSON);
             const result = { updatedAt: new Date().toISOString() };
             handles.forEach((p, i) => {
               try {
