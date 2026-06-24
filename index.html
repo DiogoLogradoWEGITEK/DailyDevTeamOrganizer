@@ -212,7 +212,7 @@
 
     /* ── PR branch overlay ────────────────────────────────────────────────── */
     @keyframes pr-card-in {
-      from { opacity: 0; transform: translateX(10px); }
+      from { opacity: 0; transform: translateX(8px); }
       to   { opacity: 1; transform: translateX(0); }
     }
     .pr-overlay {
@@ -223,20 +223,18 @@
     }
     .pr-branch-card {
       position: absolute;
-      width: 280px;
-      padding: 10px 14px;
+      width: 290px;
+      padding: 12px 14px 10px;
       background: #fff;
-      border-radius: 8px;
+      border-radius: 10px;
       border-left: 4px solid var(--cp);
-      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+      box-shadow: 0 4px 18px rgba(0,0,0,0.13);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      line-height: 1.5;
-      animation: pr-card-in 0.22s ease both;
-      overflow: hidden;
+      animation: pr-card-in 0.2s ease both;
     }
     .pr-branch-card .pr-repo {
       display: block;
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       font-weight: 700;
       color: var(--cp);
       text-transform: lowercase;
@@ -244,22 +242,47 @@
       overflow: hidden;
       text-overflow: ellipsis;
       margin-bottom: 3px;
+      letter-spacing: 0.02em;
     }
     .pr-branch-card .pr-title {
       display: block;
-      font-size: 0.95rem;
-      font-weight: 500;
-      color: #333;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #222;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .pr-branch-card .pr-num {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 700;
       color: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.5);
-      margin-right: 5px;
+      margin-right: 4px;
     }
+    .pr-branch-card .pr-body {
+      margin-top: 8px;
+      font-size: 0.72rem;
+      font-weight: 400;
+      color: #666;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      white-space: normal;
+    }
+    .pr-branch-dots {
+      display: flex;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .pr-branch-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.2);
+    }
+    .pr-branch-dot.on { background: var(--cp); }
     .pr-lines {
       position: absolute;
       inset: 0;
@@ -298,6 +321,7 @@
 
   <script src="participants.js"></script>
   <script src="participants.example.js"></script>
+  <script src="pr-data.example.js"></script>
   <script>
     const TRANSLATIONS = {
       en: { startBtn: 'Presentation Order', reroll: 'Reroll' },
@@ -410,7 +434,10 @@
 
     async function loadPRData() {
       const gistId = (window.CONFIG || {}).gistId;
-      if (!gistId || gistId === 'YOUR_GIST_ID') return;
+      if (!gistId || gistId === 'YOUR_GIST_ID') {
+        if (window.PR_DATA_EXAMPLE) { prData = window.PR_DATA_EXAMPLE; console.log('[PR] using example data', Object.keys(prData)); }
+        return;
+      }
       try {
         const r = await fetch(`https://api.github.com/gists/${gistId}`);
         if (!r.ok) return;
@@ -421,6 +448,7 @@
     }
 
     function hidePRBranches() {
+      stopPRCycle();
       const el = document.getElementById('prOverlay');
       if (el) el.remove();
     }
@@ -430,17 +458,9 @@
       const prs = prData && prData[name];
       if (!prs || !prs.length) return;
       const rect = li.getBoundingClientRect();
-
-      const liCY      = rect.top + rect.height / 2;
-      const cardW     = 280;
-      const cardH     = 54;
-      const gap       = 26;
-      const cardRight = rect.left - 50;
-      const spineX    = rect.left - 40;
-      const n         = prs.length;
-      const totalH    = n * cardH + (n - 1) * gap;
-      const startY    = liCY - totalH / 2;
-      const cardCYs   = prs.map((_, i) => startY + i * (cardH + gap) + cardH / 2);
+      const liCY     = rect.top + rect.height / 2;
+      const cardW    = 290;
+      const cardRight = rect.left - 44;
 
       const overlay = document.createElement('div');
       overlay.className = 'pr-overlay';
@@ -449,37 +469,58 @@
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('class', 'pr-lines');
       const color = getComputedStyle(document.documentElement).getPropertyValue('--cp').trim();
-
-      function mkLine(x1, y1, x2, y2) {
-        const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        l.setAttribute('x1', x1); l.setAttribute('y1', y1);
-        l.setAttribute('x2', x2); l.setAttribute('y2', y2);
-        l.setAttribute('stroke', color);
-        l.setAttribute('stroke-width', '2');
-        l.setAttribute('opacity', '0.5');
-        return l;
-      }
-
-      svg.appendChild(mkLine(rect.left, liCY, spineX, liCY));
-      if (n > 1) svg.appendChild(mkLine(spineX, cardCYs[0], spineX, cardCYs[n - 1]));
-      cardCYs.forEach(cy => svg.appendChild(mkLine(spineX, cy, cardRight, cy)));
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', rect.left);  line.setAttribute('y1', liCY);
+      line.setAttribute('x2', cardRight);  line.setAttribute('y2', liCY);
+      line.setAttribute('stroke', color);  line.setAttribute('stroke-width', '2');
+      line.setAttribute('opacity', '0.5');
+      svg.appendChild(line);
       overlay.appendChild(svg);
 
-      prs.forEach((pr, i) => {
-        const card = document.createElement('div');
-        card.className = 'pr-branch-card';
-        card.style.left = `${cardRight - cardW}px`;
-        card.style.top  = `${startY + i * (cardH + gap)}px`;
-        card.style.animationDelay = `${i * 0.07}s`;
-        card.innerHTML = `<span class="pr-repo">${escapeHtml(pr.repo || '')}</span><span class="pr-title"><span class="pr-num">#${pr.number}</span>${escapeHtml(pr.title)}</span>`;
-        overlay.appendChild(card);
-      });
+      const card = document.createElement('div');
+      card.className = 'pr-branch-card';
+      card.style.left = `${cardRight - cardW}px`;
+      card.style.top  = `${liCY - 60}px`;
 
+      function renderPR(idx) {
+        const pr = prs[idx];
+        const dots = prs.length > 1
+          ? `<div class="pr-branch-dots">${prs.map((_, di) => `<span class="pr-branch-dot${di === idx ? ' on' : ''}"></span>`).join('')}</div>`
+          : '';
+        card.innerHTML =
+          `<span class="pr-repo">${escapeHtml(pr.repo || '')}</span>` +
+          `<span class="pr-title"><span class="pr-num">#${pr.number}</span>${escapeHtml(pr.title)}</span>` +
+          (pr.body ? `<div class="pr-body">${escapeHtml(pr.body)}</div>` : '') +
+          dots;
+      }
+
+      renderPR(0);
+      overlay.appendChild(card);
       document.body.appendChild(overlay);
+      startPRCycle(prs, renderPR);
     }
 
     function escapeHtml(s) {
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    let prCycleTimer = null;
+    function startPRCycle(prs, renderFn) {
+      stopPRCycle();
+      if (prs.length <= 1) return;
+      let i = 0;
+      function scheduleNext() {
+        const ms = Math.min(Math.max((prs[i].body || '').length * 35, 3000), 8000);
+        prCycleTimer = setTimeout(() => {
+          i = (i + 1) % prs.length;
+          renderFn(i);
+          scheduleNext();
+        }, ms);
+      }
+      scheduleNext();
+    }
+    function stopPRCycle() {
+      if (prCycleTimer) { clearInterval(prCycleTimer); prCycleTimer = null; }
     }
   </script>
 

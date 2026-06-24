@@ -8,7 +8,7 @@ A lightweight GitHub Pages tool for daily standups. Shuffles participants, shows
 - Live session timer
 - Drag-and-drop reordering after shuffle
 - VS Code-styled code bubble showing the shuffle algorithm
-- **PR branch hover** — hover a participant name to see their recent merged PRs, displayed as branching cards to the left of the list (pre-fetched daily by a scheduled workflow)
+- **PR branch hover** — hover a participant name to see their recent merged PRs as a single card to the left of the list; the card cycles through up to 3 PRs (with body text) automatically, display time scales with body length (pre-fetched daily by a scheduled workflow)
 
 ## Configuring participants
 
@@ -35,22 +35,24 @@ The `github` field is used by the PR hover feature. Set it to `null` to disable 
 
 All sensitive config is kept in GitHub Actions secrets (**Settings → Secrets and variables → Actions**):
 
-| Secret | Description | Example |
-|---|---|---|
-| `PARTICIPANTS_JSON` | JSON array of `{name, github}` objects — injected as `participants.js` at deploy time | `[{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":null}]` |
-| `GH_SEARCH_SCOPE` | GitHub search scope for PR fetching — space-separated `org:` and/or `repo:` filters | `org:my-org org:another-org` |
-| `PRIMARY_COLOR` | Hex colour for the theme | `#0c3ff7` |
-| `FAVICON_URL` | URL or relative path to the favicon | `./assets/favicon.ico` |
-| `GIST_ID` | ID of the GitHub Gist used to cache pre-fetched data (the hash in the Gist URL) | `a1b2c3d4e5f6...` |
-| `GIST_PAT` | PAT with `gist` write scope — lets the workflows update the Gist | `github_pat_...` |
-| `GH_TOKEN` | PAT with `repo` read scope — used to search merged PRs in private repos | `ghp_...` |
-| `FOOTBALL_DATA_TOKEN` | football-data.org API token — only needed when the WC page is re-enabled | `abc123...` |
+| Secret                | Description                                                                           | Example                                                               |
+| --------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `PARTICIPANTS_JSON`   | JSON array of `{name, github}` objects — injected as `participants.js` at deploy time | `[{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":null}]` |
+| `GH_SEARCH_SCOPE`     | GitHub search scope for PR fetching — space-separated `org:` and/or `repo:` filters   | `org:my-org org:another-org`                                          |
+| `PRIMARY_COLOR`       | Hex colour for the theme                                                              | `#0c3ff7`                                                             |
+| `FAVICON_URL`         | URL or relative path to the favicon                                                   | `./assets/favicon.ico`                                                |
+| `GIST_ID`             | ID of the GitHub Gist used to cache pre-fetched data (the hash in the Gist URL)       | `a1b2c3d4e5f6...`                                                     |
+| `GIST_PAT`            | PAT with `gist` write scope — lets the workflows update the Gist                      | `github_pat_...`                                                      |
+| `GH_TOKEN`            | PAT with `repo` read scope — used to search merged PRs in private repos               | `ghp_...`                                                             |
+| `FOOTBALL_DATA_TOKEN` | football-data.org API token — only needed when the WC page is re-enabled              | `abc123...`                                                           |
 
 ## PR hover feature
 
 A scheduled workflow (`.github/workflows/fetch-pr-data.yml`) runs Monday–Friday at 05:23 UTC. It queries the GitHub Search API for each participant's **merged** PRs from the last 14 days across your configured GitHub organisations, then saves the result as `pr-data.json` in the Gist.
 
-The page fetches `pr-data.json` silently on load. Hovering a name draws SVG branch lines to the left with up to 3 PR cards showing the repo name, PR number, and title.
+The page fetches `pr-data.json` silently on load. Hovering a name shows a single card to the left of the list with the repo name, PR number, title, and body. The card cycles through up to 3 PRs automatically — display time per card scales with the body length (3–8 seconds).
+
+For **local preview without a Gist**, `pr-data.example.js` is loaded automatically when no `gistId` is configured and provides mock data matching the example participants.
 
 To trigger it manually: **Actions → Fetch PR Data → Run workflow**.
 
