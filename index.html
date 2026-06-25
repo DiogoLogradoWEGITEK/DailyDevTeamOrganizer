@@ -118,6 +118,8 @@
     }
 
     li {
+      position: relative;
+      z-index: 4;
       margin: 1.2vh 0;
       padding: 1.2vh 2vh;
       background: #ffffff;
@@ -367,6 +369,7 @@
       document.getElementById("timer").textContent = "00:00";
     }
 
+    let prHoverTimer = null;
     function displayNames(arr) {
       listEl.innerHTML = "";
       arr.forEach((name) => {
@@ -374,8 +377,13 @@
         li.textContent = name;
         li.setAttribute("draggable", "true");
         addDragAndDropHandlers(li);
-        li.addEventListener('mouseenter', () => showPRBranches(li, name));
-        li.addEventListener('mouseleave', hidePRBranches);
+        li.addEventListener('mouseenter', () => {
+          prHoverTimer = setTimeout(() => showPRBranches(li, name), 150);
+        });
+        li.addEventListener('mouseleave', () => {
+          clearTimeout(prHoverTimer);
+          hidePRBranches();
+        });
         listEl.appendChild(li);
       });
     }
@@ -449,8 +457,8 @@
 
     function hidePRBranches() {
       stopPRCycle();
-      const el = document.getElementById('prOverlay');
-      if (el) el.remove();
+      document.getElementById('prOverlay')?.remove();
+      document.getElementById('prOverlaySvg')?.remove();
     }
 
     function showPRBranches(li, name) {
@@ -460,12 +468,9 @@
       const rect = li.getBoundingClientRect();
       const liCY     = rect.top + rect.height / 2;
       const cardW    = 290;
-      const cardRight = rect.left - 44;
+      const cardRight = rect.left - 80;
 
-      const overlay = document.createElement('div');
-      overlay.className = 'pr-overlay';
-      overlay.id = 'prOverlay';
-
+      // SVG line — separate layer at z-index 2, below li (z-index 4)
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('class', 'pr-lines');
       const color = getComputedStyle(document.documentElement).getPropertyValue('--cp').trim();
@@ -473,14 +478,23 @@
       line.setAttribute('x1', rect.left);  line.setAttribute('y1', liCY);
       line.setAttribute('x2', cardRight);  line.setAttribute('y2', liCY);
       line.setAttribute('stroke', color);  line.setAttribute('stroke-width', '2');
-      line.setAttribute('opacity', '0.5');
+      line.setAttribute('opacity', '1');
       svg.appendChild(line);
-      overlay.appendChild(svg);
+      const svgLayer = document.createElement('div');
+      svgLayer.id = 'prOverlaySvg';
+      svgLayer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2;animation:pr-card-in 0.2s ease both;';
+      svgLayer.appendChild(svg);
+      document.body.appendChild(svgLayer);
+
+      // Card overlay — z-index 10, above li
+      const overlay = document.createElement('div');
+      overlay.className = 'pr-overlay';
+      overlay.id = 'prOverlay';
 
       const card = document.createElement('div');
       card.className = 'pr-branch-card';
       card.style.left = `${cardRight - cardW}px`;
-      card.style.top  = `${liCY - 60}px`;
+      card.style.top  = `${liCY}px`;
 
       function renderPR(idx) {
         const pr = prs[idx];
@@ -492,6 +506,9 @@
           `<span class="pr-title"><span class="pr-num">#${pr.number}</span>${escapeHtml(pr.title)}</span>` +
           (pr.body ? `<div class="pr-body">${escapeHtml(pr.body)}</div>` : '') +
           dots;
+        requestAnimationFrame(() => {
+          card.style.top = `${liCY - card.offsetHeight / 2}px`;
+        });
       }
 
       renderPR(0);
