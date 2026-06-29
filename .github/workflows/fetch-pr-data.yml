@@ -6,13 +6,21 @@ on:
   workflow_dispatch: # allow manual trigger
 
 # Required secrets:
-#   PARTICIPANTS_JSON   — JSON array of {name, github} objects (shared with deploy.yml)
-#                         e.g.: [{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":"bob-gh"}]
+#   PARTICIPANTS_JSON   — JSON array of {name, github, role?} objects (shared with deploy.yml)
+#                         role is optional: omit or "dev" for developers, "support" for QA/support staff
+#                         e.g.: [{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":"bob-gh","role":"support"}]
 #   GH_SEARCH_SCOPE     — GitHub search scope, space-separated. Supports orgs and/or repos:
 #                         e.g.: "org:my-org" or "org:my-org org:another-org" or "repo:owner/repo1 repo:owner/repo2"
 #   GH_TOKEN            — PAT with `repo` read scope (to search PRs in private repos)
-#   GIST_ID             — Gist ID where results are cached (same Gist as wc2026-data.json)
+#   GIST_ID             — Gist ID where results are cached
 #   GIST_PAT            — PAT with `gist` write scope
+#
+# Support role (future feature — no-op until qa-approved label + Matrix integration are active):
+#   When role=="support", queries PRs labelled `qa-approved` that the person commented on.
+#   Activate by:
+#     1. Creating a `qa-approved` label in your repos
+#     2. Having the Matrix app POST to GitHub API (add label + comment) when support approves a task
+#     3. Adding "role":"support" to the relevant entries in PARTICIPANTS_JSON secret
 
 jobs:
   fetch-prs:
@@ -33,14 +41,21 @@ jobs:
 
           for i in $(seq 0 $((COUNT - 1))); do
             GITHUB=$(echo "$PARTICIPANTS_JSON" | jq -r ".[$i].github")
+            ROLE=$(echo "$PARTICIPANTS_JSON" | jq -r ".[$i].role // \"dev\"")
 
             if [ "$GITHUB" = "null" ] || [ -z "$GITHUB" ]; then
               echo "[]" > "/tmp/prs/${i}.json"
               continue
             fi
 
-            # Search PRs authored by this person within the configured scope in the last 14 days
-            export SEARCH_QUERY="is:pr is:merged author:${GITHUB} ${GH_SEARCH_SCOPE} merged:>=${FOURTEEN_DAYS_AGO}"
+            if [ "$ROLE" = "support" ]; then
+              # Support staff: PRs they commented on that have the qa-approved label
+              # No-op until qa-approved label exists and Matrix integration is active
+              export SEARCH_QUERY="is:pr label:qa-approved commenter:${GITHUB} ${GH_SEARCH_SCOPE} updated:>=${FOURTEEN_DAYS_AGO}"
+            else
+              # Developers: PRs they authored and merged
+              export SEARCH_QUERY="is:pr is:merged author:${GITHUB} ${GH_SEARCH_SCOPE} merged:>=${FOURTEEN_DAYS_AGO}"
+            fi
             ENCODED=$(python3 -c "import urllib.parse,os; print(urllib.parse.quote(os.environ['SEARCH_QUERY']))")
 
             curl -sf \
