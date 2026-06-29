@@ -68,12 +68,13 @@ jobs:
             sleep 2 # stay within search rate limit (30 req/min authenticated)
           done
 
-          # Merge all results into {name: [{title, number}], updatedAt: "..."}
+          # Merge all results into {name: [{title, number}], updatedAt: "...", _roles: {...}}
           node -e "
             const fs = require('fs');
             const handles = JSON.parse(process.env.PARTICIPANTS_JSON);
-            const result = { updatedAt: new Date().toISOString() };
+            const result = { updatedAt: new Date().toISOString(), _roles: {} };
             handles.forEach((p, i) => {
+              if (p.role === 'support') result._roles[p.name] = 'support';
               try {
                 result[p.name] = JSON.parse(fs.readFileSync('/tmp/prs/' + i + '.json', 'utf8'));
               } catch (e) {

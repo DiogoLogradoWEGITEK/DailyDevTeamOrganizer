@@ -286,6 +286,27 @@
       background: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.2);
     }
     .pr-branch-dot.on { background: var(--cp); }
+    /* QA / Support card variant */
+    .pr-branch-card--qa { border-left-color: #059669; }
+    .pr-branch-card--qa::before {
+      content: 'QA';
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #059669;
+      background: rgba(5,150,105,0.08);
+      border: 1px solid rgba(5,150,105,0.25);
+      border-radius: 4px;
+      padding: 1px 6px;
+      text-transform: uppercase;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .pr-branch-card--qa .pr-repo { color: #059669; }
+    .pr-branch-card--qa .pr-num  { color: rgba(5,150,105,0.5); }
+    .pr-branch-card--qa .pr-branch-dot.on { background: #059669; }
     .pr-lines {
       position: absolute;
       inset: 0;
@@ -493,7 +514,8 @@
       overlay.id = 'prOverlay';
 
       const card = document.createElement('div');
-      card.className = 'pr-branch-card';
+      const isSupport = ((prData._roles || {})[name]) === 'support';
+      card.className = 'pr-branch-card' + (isSupport ? ' pr-branch-card--qa' : '');
       card.style.left = `${cardRight - cardW}px`;
       card.style.top  = `${liCY}px`;
 
