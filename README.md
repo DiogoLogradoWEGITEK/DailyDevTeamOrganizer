@@ -35,16 +35,15 @@ The `github` field is used by the PR hover feature. Set it to `null` to disable 
 
 All sensitive config is kept in GitHub Actions secrets (**Settings → Secrets and variables → Actions**):
 
-| Secret                | Description                                                                           | Example                                                               |
-| --------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `PARTICIPANTS_JSON`   | JSON array of `{name, github}` objects — injected as `participants.js` at deploy time | `[{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":null}]` |
-| `GH_SEARCH_SCOPE`     | GitHub search scope for PR fetching — space-separated `org:` and/or `repo:` filters   | `org:my-org org:another-org`                                          |
-| `PRIMARY_COLOR`       | Hex colour for the theme                                                              | `#0c3ff7`                                                             |
-| `FAVICON_URL`         | URL or relative path to the favicon                                                   | `./assets/favicon.ico`                                                |
-| `GIST_ID`             | ID of the GitHub Gist used to cache pre-fetched data (the hash in the Gist URL)       | `a1b2c3d4e5f6...`                                                     |
-| `GIST_PAT`            | PAT with `gist` write scope — lets the workflows update the Gist                      | `github_pat_...`                                                      |
-| `GH_TOKEN`            | PAT with `repo` read scope — used to search merged PRs in private repos               | `ghp_...`                                                             |
-| `FOOTBALL_DATA_TOKEN` | football-data.org API token — only needed when the WC page is re-enabled              | `abc123...`                                                           |
+| Secret              | Description                                                                           | Example                                                               |
+| ------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `PARTICIPANTS_JSON` | JSON array of `{name, github}` objects — injected as `participants.js` at deploy time | `[{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":null}]` |
+| `GH_SEARCH_SCOPE`   | GitHub search scope for PR fetching — space-separated `org:` and/or `repo:` filters   | `org:my-org org:another-org`                                          |
+| `PRIMARY_COLOR`     | Hex colour for the theme                                                              | `#0c3ff7`                                                             |
+| `FAVICON_URL`       | URL or relative path to the favicon                                                   | `./assets/favicon.ico`                                                |
+| `GIST_ID`           | ID of the GitHub Gist used to cache pre-fetched data (the hash in the Gist URL)       | `a1b2c3d4e5f6...`                                                     |
+| `GIST_PAT`          | PAT with `gist` write scope — lets the workflows update the Gist                      | `github_pat_...`                                                      |
+| `GH_TOKEN`          | PAT with `repo` read scope — used to search merged PRs in private repos               | `ghp_...`                                                             |
 
 ## PR hover feature
 
@@ -62,4 +61,3 @@ To trigger it manually: **Actions → Fetch PR Data → Run workflow**.
 | ------------------- | ----------------- | ------------------------------------------------------------------------------ |
 | `deploy.yml`        | On push to `main` | Builds and deploys to GitHub Pages, injects secrets, stamps git SHA as version |
 | `fetch-pr-data.yml` | Mon–Fri 05:23 UTC | Pre-fetches merged PRs for each participant into the Gist                      |
-| `fetch-wc-data.yml` | Disabled          | WC 2026 data fetch — re-enable when the tournament starts                      |
