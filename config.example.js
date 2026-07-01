@@ -5,8 +5,7 @@ if (!window.CONFIG) {
     primaryColor: "#0c3ff7",
     logoUrl: "./assets/wedigitek.png",
     faviconUrl: "./assets/favicon.ico",
-    gistId: "YOUR_GIST_ID",                  // set via GIST_ID secret
-    gistPat: "YOUR_GIST_PAT",               // set via GIST_PAT secret  (gist scope)
-    footballDataToken: "YOUR_FD_TOKEN"      // set via FOOTBALL_DATA_TOKEN secret  (football-data.org free tier)
+    gistId: "YOUR_GIST_ID",   // set via GIST_ID secret
+    gistPat: "YOUR_GIST_PAT"   // set via GIST_PAT secret  (gist scope)
   };
 }
