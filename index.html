@@ -499,14 +499,22 @@
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('x1', rect.left);  line.setAttribute('y1', liCY);
       line.setAttribute('x2', cardRight);  line.setAttribute('y2', liCY);
+      const lineLength = rect.left - cardRight;
       line.setAttribute('stroke', color);  line.setAttribute('stroke-width', '2');
-      line.setAttribute('opacity', '1');
+      line.style.strokeDasharray = lineLength;
+      line.style.strokeDashoffset = lineLength;
       svg.appendChild(line);
       const svgLayer = document.createElement('div');
       svgLayer.id = 'prOverlaySvg';
-      svgLayer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2;animation:pr-card-in 0.2s ease both;';
+      svgLayer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2;';
       svgLayer.appendChild(svg);
       document.body.appendChild(svgLayer);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          line.style.transition = 'stroke-dashoffset 0.18s ease-out';
+          line.style.strokeDashoffset = 0;
+        });
+      });
 
       // Card overlay — z-index 10, above li
       const overlay = document.createElement('div');
@@ -516,8 +524,9 @@
       const card = document.createElement('div');
       const isSupport = ((prData._roles || {})[name]) === 'support';
       card.className = 'pr-branch-card' + (isSupport ? ' pr-branch-card--qa' : '');
-      card.style.left = `${cardRight - cardW}px`;
-      card.style.top  = `${liCY}px`;
+      card.style.left      = `${cardRight - cardW}px`;
+      card.style.top       = `${liCY}px`;
+      card.style.animation = 'pr-card-in 0.15s ease 0.18s both';
 
       function renderPR(idx) {
         const pr = prs[idx];
