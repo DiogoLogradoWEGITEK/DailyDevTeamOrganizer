@@ -225,14 +225,13 @@
     }
     .pr-branch-card {
       position: absolute;
-      width: 290px;
+      width: 320px;
       padding: 12px 14px 10px;
       background: #fff;
       border-radius: 10px;
       border-left: 4px solid var(--cp);
       box-shadow: 0 4px 18px rgba(0,0,0,0.13);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      animation: pr-card-in 0.2s ease both;
     }
     .pr-branch-card .pr-repo {
       display: block;
@@ -261,6 +260,17 @@
       color: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.5);
       margin-right: 4px;
     }
+    .pr-branch-card .pr-branch-ref {
+      display: block;
+      font-size: 0.68rem;
+      font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
+      color: #aaa;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pr-branch-card .pr-branch-arrow { margin: 0 4px; color: #ccc; }
     .pr-branch-card .pr-body {
       margin-top: 8px;
       font-size: 0.72rem;
@@ -268,24 +278,12 @@
       color: #666;
       line-height: 1.5;
       display: -webkit-box;
-      -webkit-line-clamp: 3;
-      line-clamp: 3;
+      -webkit-line-clamp: 5;
+      line-clamp: 5;
       -webkit-box-orient: vertical;
       overflow: hidden;
       white-space: normal;
     }
-    .pr-branch-dots {
-      display: flex;
-      gap: 5px;
-      margin-top: 10px;
-    }
-    .pr-branch-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.2);
-    }
-    .pr-branch-dot.on { background: var(--cp); }
     /* QA / Support card variant */
     .pr-branch-card--qa { border-left-color: #059669; }
     .pr-branch-card--qa::before {
@@ -304,9 +302,10 @@
       text-transform: uppercase;
       font-family: system-ui, -apple-system, sans-serif;
     }
-    .pr-branch-card--qa .pr-repo { color: #059669; }
-    .pr-branch-card--qa .pr-num  { color: rgba(5,150,105,0.5); }
-    .pr-branch-card--qa .pr-branch-dot.on { background: #059669; }
+    .pr-branch-card--qa .pr-repo         { color: #059669; }
+    .pr-branch-card--qa .pr-num          { color: rgba(5,150,105,0.5); }
+    .pr-branch-card--qa .pr-branch-ref   { color: rgba(5,150,105,0.5); }
+    .pr-branch-card--qa .pr-branch-arrow { color: rgba(5,150,105,0.3); }
     .pr-lines {
       position: absolute;
       inset: 0;
@@ -478,7 +477,6 @@
     }
 
     function hidePRBranches() {
-      stopPRCycle();
       document.getElementById('prOverlay')?.remove();
       document.getElementById('prOverlaySvg')?.remove();
     }
@@ -487,90 +485,84 @@
       hidePRBranches();
       const prs = prData && prData[name];
       if (!prs || !prs.length) return;
+      const displayPrs = prs.slice(0, 3);
       const rect = li.getBoundingClientRect();
-      const liCY     = rect.top + rect.height / 2;
-      const cardW    = 290;
-      const cardRight = rect.left - 80;
+      const liCY = rect.top + rect.height / 2;
+      const cardW = 320;
+      const cardRight = rect.left - 72;
+      const cardGap = 10;
+      const isSupport = ((prData._roles || {})[name]) === 'support';
+      const color = getComputedStyle(document.documentElement).getPropertyValue('--cp').trim();
 
-      // SVG line — separate layer at z-index 2, below li (z-index 4)
+      // SVG layer for branch lines
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('class', 'pr-lines');
-      const color = getComputedStyle(document.documentElement).getPropertyValue('--cp').trim();
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', rect.left);  line.setAttribute('y1', liCY);
-      line.setAttribute('x2', cardRight);  line.setAttribute('y2', liCY);
-      const lineLength = rect.left - cardRight;
-      line.setAttribute('stroke', color);  line.setAttribute('stroke-width', '2');
-      line.style.strokeDasharray = lineLength;
-      line.style.strokeDashoffset = lineLength;
-      svg.appendChild(line);
       const svgLayer = document.createElement('div');
       svgLayer.id = 'prOverlaySvg';
       svgLayer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2;';
       svgLayer.appendChild(svg);
       document.body.appendChild(svgLayer);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          line.style.transition = 'stroke-dashoffset 0.18s ease-out';
-          line.style.strokeDashoffset = 0;
-        });
-      });
 
-      // Card overlay — z-index 10, above li
+      // Card overlay
       const overlay = document.createElement('div');
       overlay.className = 'pr-overlay';
       overlay.id = 'prOverlay';
+      document.body.appendChild(overlay);
 
-      const card = document.createElement('div');
-      const isSupport = ((prData._roles || {})[name]) === 'support';
-      card.className = 'pr-branch-card' + (isSupport ? ' pr-branch-card--qa' : '');
-      card.style.left      = `${cardRight - cardW}px`;
-      card.style.top       = `${liCY}px`;
-      card.style.animation = 'pr-card-in 0.15s ease 0.18s both';
-
-      function renderPR(idx) {
-        const pr = prs[idx];
-        const dots = prs.length > 1
-          ? `<div class="pr-branch-dots">${prs.map((_, di) => `<span class="pr-branch-dot${di === idx ? ' on' : ''}"></span>`).join('')}</div>`
-          : '';
+      // Create cards hidden for measurement
+      const cards = displayPrs.map((pr) => {
+        const card = document.createElement('div');
+        card.className = 'pr-branch-card' + (isSupport ? ' pr-branch-card--qa' : '');
+        card.style.cssText = `left:${cardRight - cardW}px; top:0; visibility:hidden;`;
         card.innerHTML =
           `<span class="pr-repo">${escapeHtml(pr.repo || '')}</span>` +
+          (pr.branch ? `<span class="pr-branch-ref">${escapeHtml(pr.branch)}<span class="pr-branch-arrow">→</span>${escapeHtml(pr.baseBranch || 'main')}</span>` : '') +
           `<span class="pr-title"><span class="pr-num">#${pr.number}</span>${escapeHtml(pr.title)}</span>` +
-          (pr.body ? `<div class="pr-body">${escapeHtml(pr.body)}</div>` : '') +
-          dots;
-        requestAnimationFrame(() => {
-          card.style.top = `${liCY - card.offsetHeight / 2}px`;
-        });
-      }
+          (pr.body ? `<div class="pr-body">${escapeHtml(pr.body)}</div>` : '');
+        overlay.appendChild(card);
+        return card;
+      });
 
-      renderPR(0);
-      overlay.appendChild(card);
-      document.body.appendChild(overlay);
-      startPRCycle(prs, renderPR);
+      // Measure, position, then animate
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const heights = cards.map(c => c.offsetHeight);
+          const totalH = heights.reduce((s, h) => s + h, 0) + cardGap * (cards.length - 1);
+          let y = liCY - totalH / 2;
+
+          cards.forEach((card, idx) => {
+            const h = heights[idx];
+            const cardCY = y + h / 2;
+            card.style.top = `${y}px`;
+            card.style.visibility = '';
+            card.style.animation = `pr-card-in 0.15s ease ${0.18 + idx * 0.07}s both`;
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', rect.left); line.setAttribute('y1', liCY);
+            line.setAttribute('x2', cardRight);  line.setAttribute('y2', cardCY);
+            const lineLen = Math.hypot(rect.left - cardRight, liCY - cardCY);
+            line.setAttribute('stroke', color); line.setAttribute('stroke-width', '1.5');
+            line.style.strokeDasharray = lineLen;
+            line.style.strokeDashoffset = lineLen;
+            svg.appendChild(line);
+
+            setTimeout(() => {
+              requestAnimationFrame(() => {
+                line.style.transition = 'stroke-dashoffset 0.18s ease-out';
+                line.style.strokeDashoffset = 0;
+              });
+            }, idx * 70);
+
+            y += h + cardGap;
+          });
+        });
+      });
     }
 
     function escapeHtml(s) {
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    let prCycleTimer = null;
-    function startPRCycle(prs, renderFn) {
-      stopPRCycle();
-      if (prs.length <= 1) return;
-      let i = 0;
-      function scheduleNext() {
-        const ms = Math.min(Math.max((prs[i].body || '').length * 35, 3000), 8000);
-        prCycleTimer = setTimeout(() => {
-          i = (i + 1) % prs.length;
-          renderFn(i);
-          scheduleNext();
-        }, ms);
-      }
-      scheduleNext();
-    }
-    function stopPRCycle() {
-      if (prCycleTimer) { clearInterval(prCycleTimer); prCycleTimer = null; }
-    }
   </script>
 
   <div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);font-size:0.65rem;opacity:0.35;font-family:monospace;pointer-events:none;z-index:9999">__VERSION__</div>
