@@ -8,7 +8,7 @@ A lightweight GitHub Pages tool for daily standups. Shuffles participants, shows
 - Live session timer
 - Drag-and-drop reordering after shuffle
 - VS Code-styled code bubble showing the shuffle algorithm
-- **PR branch hover** — hover a participant name to see their recent merged PRs as a single card to the left of the list; the card cycles through up to 3 PRs (with body text) automatically, display time scales with body length (pre-fetched daily by a scheduled workflow)
+- **PR branch hover** — hover a participant name to see up to 3 recent merged PR cards fanned out to the left, each with its own animated branch line showing `branch → base`; displays PR body text or falls back to commit message headlines when no body is written; data is pre-fetched daily by a scheduled workflow
 
 ## Configuring participants
 
@@ -47,9 +47,9 @@ All sensitive config is kept in GitHub Actions secrets (**Settings → Secrets a
 
 ## PR hover feature
 
-A scheduled workflow (`.github/workflows/fetch-pr-data.yml`) runs Monday–Friday at 05:23 UTC. It queries the GitHub Search API for each participant's **merged** PRs from the last 14 days across your configured GitHub organisations, then saves the result as `pr-data.json` in the Gist.
+A scheduled workflow (`.github/workflows/fetch-pr-data.yml`) runs Monday–Friday at 05:23 UTC. It uses the GitHub GraphQL API to fetch each participant's 3 most recent merged PRs — title, body, branch name, target branch, and the last 5 commit message headlines. If a PR has no body, the commit headlines are joined and used as the description instead. Results are saved as `pr-data.json` in the Gist.
 
-The page fetches `pr-data.json` silently on load. Hovering a name shows a single card to the left of the list with the repo name, PR number, title, and body. The card cycles through up to 3 PRs automatically — display time per card scales with the body length (3–8 seconds).
+The page fetches `pr-data.json` silently on load. Hovering a name shows up to 3 PR cards fanned to the left of the list, each connected by its own animated branch line. Cards appear staggered after the lines finish drawing. Each card shows the repo name, `branch → target`, PR number and title, and body (or commit headlines as fallback).
 
 For **local preview without a Gist**, `pr-data.example.js` is loaded automatically when no `gistId` is configured and provides mock data matching the example participants.
 

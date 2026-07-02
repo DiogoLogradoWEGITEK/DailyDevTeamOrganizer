@@ -56,14 +56,14 @@ jobs:
               # Developers: PRs they authored and merged
               SEARCH_QUERY="is:pr is:merged author:${GITHUB} ${GH_SEARCH_SCOPE} merged:>=${FOURTEEN_DAYS_AGO}"
             fi
-            GRAPHQL_QUERY='query($q:String!){search(query:$q,type:ISSUE,first:3){nodes{...on PullRequest{title number repository{name} body headRefName baseRefName}}}}'
+            GRAPHQL_QUERY='query($q:String!){search(query:$q,type:ISSUE,first:3){nodes{...on PullRequest{title number repository{name} body headRefName baseRefName commits(last:5){nodes{commit{messageHeadline}}}}}}}'
 
             curl -sf \
               -H "Authorization: bearer $GH_TOKEN" \
               -H "Content-Type: application/json" \
               -X POST "https://api.github.com/graphql" \
               -d "$(jq -nc --arg q "$SEARCH_QUERY" --arg gql "$GRAPHQL_QUERY" '{query:$gql,variables:{q:$q}}')" \
-            | jq '[(.data.search.nodes//[])[]|select(.title!=null)|{title,number,repo:.repository.name,body:(.body//""|gsub("[*#`_~]";"")|gsub("[\r\n]+";" ")|gsub("  +";" ")|ltrimstr(" ")|.[0:200]),branch:.headRefName,baseBranch:.baseRefName}]' \
+            | jq '[(.data.search.nodes//[])[]|select(.title!=null)|(.body//""|gsub("[*#`_~]";"")|gsub("[\r\n]+";" ")|gsub("  +";" ")|ltrimstr(" ")) as $b|{title,number,repo:.repository.name,body:(if ($b|length)>0 then ($b|.[0:200]) else ([(.commits.nodes//[])[].commit.messageHeadline]|join(" \u00b7 ")|.[0:200]) end),branch:.headRefName,baseBranch:.baseRefName}]' \
             > "/tmp/prs/${i}.json" || echo "[]" > "/tmp/prs/${i}.json"
 
             sleep 2 # stay within search rate limit (30 req/min authenticated)
