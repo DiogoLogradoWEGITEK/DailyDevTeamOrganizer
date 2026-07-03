@@ -102,12 +102,16 @@ jobs:
             const fs = require('fs');
             const data = JSON.parse(fs.readFileSync('/tmp/pr-data.json', 'utf8'));
             Object.entries(data).forEach(([key, val]) => {
-              if (key === 'updatedAt') return;
+              if (key === 'updatedAt' || key === '_roles') return;
               if (!val.length) {
                 console.log('  ' + key + ': (no PRs this week)');
               } else {
                 console.log('  ' + key + ':');
-                val.forEach(pr => console.log('    [' + pr.repo + ' #' + pr.number + '] ' + pr.title));
+                val.forEach(pr => {
+                  console.log('    [' + pr.repo + ' #' + pr.number + '] ' + pr.title);
+                  if (pr.branch) console.log('      branch : ' + pr.branch + ' → ' + (pr.baseBranch || 'main'));
+                  if (pr.body)   console.log('      body   : ' + pr.body.slice(0, 120) + (pr.body.length > 120 ? '…' : ''));
+                });
               }
             });
           "
