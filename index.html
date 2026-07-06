@@ -225,8 +225,8 @@
     }
     .pr-branch-card {
       position: absolute;
-      width: 320px;
-      padding: 12px 14px 10px;
+      width: 360px;
+      padding: 14px 16px 12px;
       background: #fff;
       border-radius: 10px;
       border-left: 4px solid var(--cp);
@@ -235,7 +235,7 @@
     }
     .pr-branch-card .pr-repo {
       display: block;
-      font-size: 0.75rem;
+      font-size: 0.84rem;
       font-weight: 700;
       color: var(--cp);
       text-transform: lowercase;
@@ -247,7 +247,7 @@
     }
     .pr-branch-card .pr-title {
       display: block;
-      font-size: 0.9rem;
+      font-size: 1.02rem;
       font-weight: 600;
       color: #222;
       white-space: nowrap;
@@ -255,28 +255,28 @@
       text-overflow: ellipsis;
     }
     .pr-branch-card .pr-num {
-      font-size: 0.78rem;
+      font-size: 0.88rem;
       font-weight: 700;
       color: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.5);
       margin-right: 4px;
     }
     .pr-branch-card .pr-branch-ref {
       display: block;
-      font-size: 0.68rem;
+      font-size: 0.78rem;
       font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
-      color: #aaa;
-      margin-top: 2px;
+      color: #222;
+      margin-top: 4px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .pr-branch-card .pr-branch-arrow { margin: 0 4px; color: #ccc; }
+    .pr-branch-card .pr-branch-arrow { margin: 0 4px; color: #222; }
     .pr-branch-card .pr-body {
-      margin-top: 8px;
-      font-size: 0.72rem;
+      margin-top: 10px;
+      font-size: 0.84rem;
       font-weight: 400;
-      color: #666;
-      line-height: 1.5;
+      color: #222;
+      line-height: 1.55;
       display: -webkit-box;
       -webkit-line-clamp: 5;
       line-clamp: 5;
@@ -304,8 +304,8 @@
     }
     .pr-branch-card--qa .pr-repo         { color: #059669; }
     .pr-branch-card--qa .pr-num          { color: rgba(5,150,105,0.5); }
-    .pr-branch-card--qa .pr-branch-ref   { color: rgba(5,150,105,0.5); }
-    .pr-branch-card--qa .pr-branch-arrow { color: rgba(5,150,105,0.3); }
+    .pr-branch-card--qa .pr-branch-ref   { color: #222; }
+    .pr-branch-card--qa .pr-branch-arrow { color: #222; }
     .pr-lines {
       position: absolute;
       inset: 0;
@@ -488,10 +488,11 @@
       const displayPrs = prs.slice(0, 3);
       const rect = li.getBoundingClientRect();
       const liCY = rect.top + rect.height / 2;
-      const cardW = 320;
+      const cardW = 360;
       const cardRight = rect.left - 72;
-      const cardGap = 10;
+      const cardGap = 12;
       const isSupport = ((prData._roles || {})[name]) === 'support';
+      const isLastChild = li.parentElement && li === li.parentElement.lastElementChild;
       const color = getComputedStyle(document.documentElement).getPropertyValue('--cp').trim();
 
       // SVG layer for branch lines
@@ -529,6 +530,12 @@
           const heights = cards.map(c => c.offsetHeight);
           const totalH = heights.reduce((s, h) => s + h, 0) + cardGap * (cards.length - 1);
           let y = liCY - totalH / 2;
+          if (isLastChild) y -= 38;
+
+          // Keep cards inside viewport so the lowest card doesn't get cropped on calls/screenshares.
+          const viewportPadding = 12;
+          const maxY = window.innerHeight - totalH - viewportPadding;
+          y = Math.max(viewportPadding, Math.min(y, maxY));
 
           cards.forEach((card, idx) => {
             const h = heights[idx];
