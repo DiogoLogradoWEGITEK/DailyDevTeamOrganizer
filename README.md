@@ -35,15 +35,15 @@ The `github` field is used by the PR hover feature. Set it to `null` to disable 
 
 All sensitive config is kept in GitHub Actions secrets (**Settings → Secrets and variables → Actions**):
 
-| Secret              | Description                                                                           | Example                                                               |
-| ------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `PARTICIPANTS_JSON` | JSON array of `{name, github}` objects — injected as `participants.js` at deploy time | `[{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":null}]` |
-| `GH_SEARCH_SCOPE`   | GitHub search scope for PR fetching — space-separated `org:` and/or `repo:` filters   | `org:my-org org:another-org`                                          |
-| `PRIMARY_COLOR`     | Hex colour for the theme                                                              | `#0c3ff7`                                                             |
-| `FAVICON_URL`       | URL or relative path to the favicon                                                   | `./assets/favicon.ico`                                                |
-| `GIST_ID`           | ID of the GitHub Gist used to cache pre-fetched data (the hash in the Gist URL)       | `a1b2c3d4e5f6...`                                                     |
-| `GIST_PAT`          | PAT with `gist` write scope — lets the workflows update the Gist                      | `github_pat_...`                                                      |
-| `GH_TOKEN`          | PAT with `repo` read scope — used to search merged PRs in private repos               | `ghp_...`                                                             |
+| Secret              | Description                                                                                                                                                                     | Example                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `PARTICIPANTS_JSON` | Participants array — injected as `participants.js` at deploy time. Accepts strict JSON, a JS-style array (as in `participants.js`), or the whole `participants.js` file content | `[{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":null}]` |
+| `GH_SEARCH_SCOPE`   | GitHub search scope for PR fetching — space-separated `org:` and/or `repo:` filters                                                                                             | `org:my-org org:another-org`                                          |
+| `PRIMARY_COLOR`     | Hex colour for the theme                                                                                                                                                        | `#0c3ff7`                                                             |
+| `FAVICON_URL`       | URL or relative path to the favicon                                                                                                                                             | `./assets/favicon.ico`                                                |
+| `GIST_ID`           | ID of the GitHub Gist used to cache pre-fetched data (the hash in the Gist URL)                                                                                                 | `a1b2c3d4e5f6...`                                                     |
+| `GIST_PAT`          | PAT with `gist` write scope — lets the workflows update the Gist                                                                                                                | `github_pat_...`                                                      |
+| `GH_TOKEN`          | PAT with `repo` read scope — used to search merged PRs in private repos                                                                                                         | `ghp_...`                                                             |
 
 ## PR hover feature
 

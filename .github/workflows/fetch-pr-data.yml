@@ -6,9 +6,13 @@ on:
   workflow_dispatch: # allow manual trigger
 
 # Required secrets:
-#   PARTICIPANTS_JSON   — JSON array of {name, github, role?} objects (shared with deploy.yml)
+#   PARTICIPANTS_JSON   — participants array (shared with deploy.yml). Accepts any of:
+#                         - strict JSON:            [{"name":"Alice","github":"alice-gh"}]
+#                         - JS-style (as in participants.js):
+#                           [{ name: "Alice", github: "alice-gh" }]
+#                         - the whole participants.js file content incl. comments and
+#                           the window.PARTICIPANTS = ...; wrapper
 #                         role is optional: omit or "dev" for developers, "support" for QA/support staff
-#                         e.g.: [{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":"bob-gh","role":"support"}]
 #   GH_SEARCH_SCOPE     — GitHub search scope, space-separated. Supports orgs and/or repos:
 #                         e.g.: "org:my-org" or "org:my-org org:another-org" or "repo:owner/repo1 repo:owner/repo2"
 #   GH_TOKEN            — PAT with `repo` read scope (to search PRs in private repos)
@@ -32,16 +36,29 @@ jobs:
       GIST_ID: ${{ secrets.GIST_ID }}
       GIST_PAT: ${{ secrets.GIST_PAT }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Normalize PARTICIPANTS_JSON
+        env:
+          PARTICIPANTS_JSON: ${{ secrets.PARTICIPANTS_JSON }}
+        run: |
+          NORMALIZED=$(printf '%s' "$PARTICIPANTS_JSON" | node "${GITHUB_WORKSPACE}/scripts/normalize-participants.js")
+          echo "NORMALIZED<<EOF_MARKER_9F3A" >> "$GITHUB_ENV"
+          echo "$NORMALIZED" >> "$GITHUB_ENV"
+          echo "EOF_MARKER_9F3A" >> "$GITHUB_ENV"
+          echo "Participants normalized: $(echo "$NORMALIZED" | jq 'length') entries"
+
       - name: Fetch recent PRs for each participant and cache to Gist
         run: |
           FOURTEEN_DAYS_AGO=$(date -d '14 days ago' +%Y-%m-%d)
-          COUNT=$(echo "$PARTICIPANTS_JSON" | jq 'length')
+          COUNT=$(echo "$NORMALIZED" | jq 'length')
 
           mkdir -p /tmp/prs
 
           for i in $(seq 0 $((COUNT - 1))); do
-            GITHUB=$(echo "$PARTICIPANTS_JSON" | jq -r ".[$i].github")
-            ROLE=$(echo "$PARTICIPANTS_JSON" | jq -r ".[$i].role // \"dev\"")
+            GITHUB=$(echo "$NORMALIZED" | jq -r ".[$i].github")
+            ROLE=$(echo "$NORMALIZED" | jq -r ".[$i].role // \"dev\"")
 
             if [ "$GITHUB" = "null" ] || [ -z "$GITHUB" ]; then
               echo "[]" > "/tmp/prs/${i}.json"
@@ -72,7 +89,7 @@ jobs:
           # Merge all results into {name: [{title, number}], updatedAt: "...", _roles: {...}}
           node -e "
             const fs = require('fs');
-            const handles = JSON.parse(process.env.PARTICIPANTS_JSON);
+            const handles = JSON.parse(process.env.NORMALIZED);
             const result = { updatedAt: new Date().toISOString(), _roles: {} };
             handles.forEach((p, i) => {
               if (p.role === 'support') result._roles[p.name] = 'support';

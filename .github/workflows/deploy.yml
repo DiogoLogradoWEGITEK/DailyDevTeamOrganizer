@@ -25,13 +25,17 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Write participants
-        # PARTICIPANTS_JSON must be a JSON array string, e.g.: ["Alice","Bob","Carol"]
-        # Set it in: Settings → Secrets and variables → Actions → New repository secret
+        # PARTICIPANTS_JSON accepts any of:
+        #   - strict JSON:            [{"name":"Alice","github":"alice-gh"}]
+        #   - JS-style (as in participants.js): [{ name: "Alice", github: "alice-gh" }]
+        #   - the whole participants.js content incl. comments and window.PARTICIPANTS = ...;
+        # It is normalized to strict JSON by scripts/normalize-participants.js before writing.
         env:
           PARTICIPANTS_JSON: ${{ secrets.PARTICIPANTS_JSON }}
         run: |
           if [ -n "$PARTICIPANTS_JSON" ]; then
-            printf 'window.PARTICIPANTS = %s;\n' "$PARTICIPANTS_JSON" > participants.js
+            NORMALIZED=$(printf '%s' "$PARTICIPANTS_JSON" | node "${GITHUB_WORKSPACE}/scripts/normalize-participants.js")
+            printf 'window.PARTICIPANTS = %s;\n' "$NORMALIZED" > participants.js
             echo "participants.js written from secret."
           else
             echo "PARTICIPANTS_JSON secret not set — example data will be used as fallback."
