@@ -56,7 +56,7 @@ To trigger it manually: **Actions → Fetch PR Data → Run workflow**.
 
 ## Workflows
 
-| Workflow            | Schedule          | Purpose                                                                        |
-| ------------------- | ----------------- | ------------------------------------------------------------------------------ |
-| `deploy.yml`        | On push to `main` | Builds and deploys to GitHub Pages, injects secrets, stamps git SHA as version |
+| Workflow            | Schedule                         | Purpose                                                                        |
+| ------------------- | -------------------------------- | ------------------------------------------------------------------------------ |
+| `deploy.yml`        | On push to `main`                | Builds and deploys to GitHub Pages, injects secrets, stamps git SHA as version |
 | `fetch-pr-data.yml` | Mon–Fri 12:23/14:23/15:23 Lisbon | Pre-fetches merged PRs for each participant into the Gist                      |
