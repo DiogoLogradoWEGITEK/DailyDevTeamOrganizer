@@ -41,9 +41,8 @@ All sensitive config is kept in GitHub Actions secrets (**Settings → Secrets a
 | `GH_SEARCH_SCOPE`   | GitHub search scope for PR fetching — space-separated `org:` and/or `repo:` filters                                                                                             | `org:my-org org:another-org`                                          |
 | `PRIMARY_COLOR`     | Hex colour for the theme                                                                                                                                                        | `#0c3ff7`                                                             |
 | `FAVICON_URL`       | URL or relative path to the favicon                                                                                                                                             | `./assets/favicon.ico`                                                |
-| `GIST_ID`           | ID of the GitHub Gist used to cache pre-fetched data (the hash in the Gist URL)                                                                                                 | `a1b2c3d4e5f6...`                                                     |
-| `GIST_PAT`          | PAT with `gist` write scope — lets the workflows update the Gist                                                                                                                | `github_pat_...`                                                      |
-| `GH_TOKEN`          | PAT with `repo` read scope — used to search merged PRs in private repos                                                                                                         | `ghp_...`                                                             |
+| `GIST_ID`           | ID of the GitHub Gist used to cache pre-fetched data (the hash in the Gist URL). The page reads it anonymously; no PAT is needed client-side                                    | `a1b2c3d4e5f6...`                                                     |
+| `GH_TOKEN`          | PAT with `repo` + `gist` scopes — the only credential: searches merged PRs in private repos and lets the workflow update the Gist                                               | `ghp_...`                                                             |
 
 ## PR hover feature
 

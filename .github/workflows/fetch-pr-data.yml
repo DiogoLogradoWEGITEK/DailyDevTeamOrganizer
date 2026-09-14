@@ -17,7 +17,9 @@ on:
 #                         e.g.: "org:my-org" or "org:my-org org:another-org" or "repo:owner/repo1 repo:owner/repo2"
 #   GH_TOKEN            — PAT with `repo` + `gist` scopes (search + gist cache)
 #   GIST_ID             — Gist ID where results are cached
-#   GIST_PAT            — optional; falls back to GH_TOKEN
+#
+# Single-token setup: GH_TOKEN is the only credential, used for both the
+# searches and the Gist cache.
 #
 # Support role (future feature — no-op until qa-approved label + Matrix integration are active):
 #   When role=="support", queries PRs labelled `qa-approved` that the person commented on.
@@ -34,7 +36,6 @@ jobs:
       GH_SEARCH_SCOPE: ${{ secrets.GH_SEARCH_SCOPE }}
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
       GIST_ID: ${{ secrets.GIST_ID }}
-      GIST_PAT: ${{ secrets.GIST_PAT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -102,12 +103,11 @@ jobs:
             fs.writeFileSync('/tmp/pr-data.json', JSON.stringify(result));
           "
 
-          # Patch Gist (GIST_PAT falls back to GH_TOKEN when unset)
-          GIST_PAT="${GIST_PAT:-$GH_TOKEN}"
+          # Patch Gist (single token: GH_TOKEN)
           HTTP=$(jq -n --rawfile content /tmp/pr-data.json \
             '{files: {"pr-data.json": {content: $content}}}' \
           | curl -s -w '%{http_code}' -o /tmp/gist-resp.json -X PATCH "https://api.github.com/gists/$GIST_ID" \
-              -H "Authorization: token $GIST_PAT" \
+              -H "Authorization: token $GH_TOKEN" \
               -H "Content-Type: application/json" \
               -d @-) || HTTP=000
           if [ "$HTTP" = "200" ]; then

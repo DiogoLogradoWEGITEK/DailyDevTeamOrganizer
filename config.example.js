@@ -5,7 +5,6 @@ if (!window.CONFIG) {
     primaryColor: "#0c3ff7",
     logoUrl: "./assets/wedigitek.png",
     faviconUrl: "./assets/favicon.ico",
-    gistId: "YOUR_GIST_ID",   // set via GIST_ID secret
-    gistPat: "YOUR_GIST_PAT"   // set via GIST_PAT secret  (gist scope)
+    gistId: "YOUR_GIST_ID"   // set via GIST_ID secret; the page reads the gist anonymously
   };
 }
