@@ -46,7 +46,7 @@ All sensitive config is kept in GitHub Actions secrets (**Settings → Secrets a
 
 ## PR hover feature
 
-A scheduled workflow (`.github/workflows/fetch-pr-data.yml`) runs Monday–Friday at 05:23 UTC. It uses the GitHub GraphQL API to fetch each participant's 3 most recent merged PRs — title, body, branch name, target branch, and the last 5 commit message headlines. If a PR has no body, the commit headlines are joined and used as the description instead. Results are saved as `pr-data.json` in the Gist.
+A scheduled workflow (`.github/workflows/fetch-pr-data.yml`) runs Monday–Friday at 12:23/14:23/15:23 Lisbon (11:23/13:23/14:23 UTC) so the data is fresh for the daily. It uses the GitHub GraphQL API to fetch each participant's 3 most recent merged PRs — title, body, branch name, target branch, and the last 5 commit message headlines. If a PR has no body, the commit headlines are joined and used as the description instead. Results are saved as `pr-data.json` in the Gist.
 
 The page fetches `pr-data.json` silently on load. Hovering a name shows up to 3 PR cards fanned to the left of the list, each connected by its own animated branch line. Cards appear staggered after the lines finish drawing. Each card shows the repo name, `branch → target`, PR number and title, and body (or commit headlines as fallback).
 
@@ -59,4 +59,4 @@ To trigger it manually: **Actions → Fetch PR Data → Run workflow**.
 | Workflow            | Schedule          | Purpose                                                                        |
 | ------------------- | ----------------- | ------------------------------------------------------------------------------ |
 | `deploy.yml`        | On push to `main` | Builds and deploys to GitHub Pages, injects secrets, stamps git SHA as version |
-| `fetch-pr-data.yml` | Mon–Fri 05:23 UTC | Pre-fetches merged PRs for each participant into the Gist                      |
+| `fetch-pr-data.yml` | Mon–Fri 12:23/14:23/15:23 Lisbon | Pre-fetches merged PRs for each participant into the Gist                      |
