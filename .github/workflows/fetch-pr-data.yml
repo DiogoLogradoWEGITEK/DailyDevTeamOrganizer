@@ -15,9 +15,9 @@ on:
 #                         role is optional: omit or "dev" for developers, "support" for QA/support staff
 #   GH_SEARCH_SCOPE     — GitHub search scope, space-separated. Supports orgs and/or repos:
 #                         e.g.: "org:my-org" or "org:my-org org:another-org" or "repo:owner/repo1 repo:owner/repo2"
-#   GH_TOKEN            — PAT with `repo` read scope (to search PRs in private repos)
+#   GH_TOKEN            — PAT with `repo` + `gist` scopes (search + gist cache)
 #   GIST_ID             — Gist ID where results are cached
-#   GIST_PAT            — PAT with `gist` write scope
+#   GIST_PAT            — optional; falls back to GH_TOKEN
 #
 # Support role (future feature — no-op until qa-approved label + Matrix integration are active):
 #   When role=="support", queries PRs labelled `qa-approved` that the person commented on.
@@ -102,15 +102,21 @@ jobs:
             fs.writeFileSync('/tmp/pr-data.json', JSON.stringify(result));
           "
 
-          # Patch Gist
-          jq -n --rawfile content /tmp/pr-data.json \
+          # Patch Gist (GIST_PAT falls back to GH_TOKEN when unset)
+          GIST_PAT="${GIST_PAT:-$GH_TOKEN}"
+          HTTP=$(jq -n --rawfile content /tmp/pr-data.json \
             '{files: {"pr-data.json": {content: $content}}}' \
-          | curl -sf -X PATCH "https://api.github.com/gists/$GIST_ID" \
+          | curl -s -w '%{http_code}' -o /tmp/gist-resp.json -X PATCH "https://api.github.com/gists/$GIST_ID" \
               -H "Authorization: token $GIST_PAT" \
               -H "Content-Type: application/json" \
-              -d @-
-
-          echo "Done — PR data cached at $(date -u)"
+              -d @-) || HTTP=000
+          if [ "$HTTP" = "200" ]; then
+            echo "Done — PR data cached at $(date -u)"
+          else
+            echo "::error::Gist PATCH failed (HTTP $HTTP)"
+            head -c 400 /tmp/gist-resp.json; echo
+            exit 1
+          fi
 
       - name: PR Fetch Summary
         run: |
