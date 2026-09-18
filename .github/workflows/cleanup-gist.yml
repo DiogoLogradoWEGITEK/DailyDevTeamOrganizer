@@ -1,0 +1,39 @@
+name: Cleanup Gist
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/cleanup-gist.yml
+
+permissions: {}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      GIST_ID: ${{ secrets.GIST_ID }}
+    steps:
+      - name: Delete wc2026 files
+        run: |
+          files=$(curl -sf -H "Authorization: token $GH_TOKEN" "https://api.github.com/gists/$GIST_ID" \
+            | jq -r '.files | keys[]' | grep '^wc2026' || true)
+          if [ -z "$files" ]; then
+            echo "No wc2026 files found - nothing to do."
+            exit 0
+          fi
+          echo "Deleting: $files"
+          body=$(echo "$files" | jq -Rs 'split("\n") | map(select(length>0)) | {files: (map({(.): null}) | add)}')
+          HTTP=$(curl -s -w '%{http_code}' -o /tmp/resp.json -X PATCH "https://api.github.com/gists/$GIST_ID" \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$body") || HTTP=000
+          echo "PATCH HTTP: $HTTP"
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::Gist PATCH failed"
+            head -c 400 /tmp/resp.json; echo
+            exit 1
+          fi
+          echo "Remaining files:"
+          curl -sf -H "Authorization: token $GH_TOKEN" "https://api.github.com/gists/$GIST_ID" | jq -r '.files | keys[]'
