@@ -52,12 +52,14 @@ jobs:
           LOGO_URL: ${{ secrets.LOGO_URL }}
           FAVICON_URL: ${{ secrets.FAVICON_URL }}
           GIST_ID: ${{ secrets.GIST_ID }}
+          GIST_OWNER: ${{ github.repository_owner }}
         run: |
-          printf 'window.CONFIG = { primaryColor: "%s", logoUrl: "%s", faviconUrl: "%s", gistId: "%s" };\n' \
+          printf 'window.CONFIG = { primaryColor: "%s", logoUrl: "%s", faviconUrl: "%s", gistId: "%s", gistUser: "%s" };\n' \
             "${PRIMARY_COLOR:-#0c3ff7}" \
             "${LOGO_URL:-./assets/wedigitek.png}" \
             "${FAVICON_URL:-./assets/favicon.ico}" \
-            "${GIST_ID}" > config.js
+            "${GIST_ID}" \
+            "${GIST_OWNER}" > config.js
           echo "config.js written."
 
       - name: Inject version

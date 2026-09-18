@@ -5,6 +5,7 @@ if (!window.CONFIG) {
     primaryColor: "#0c3ff7",
     logoUrl: "./assets/wedigitek.png",
     faviconUrl: "./assets/favicon.ico",
-    gistId: "YOUR_GIST_ID"   // set via GIST_ID secret; the page reads the gist anonymously
+    gistId: "YOUR_GIST_ID",  // set via GIST_ID secret; the page reads the gist anonymously
+    gistUser: ""             // gist owner username; injected from repo owner at deploy
   };
 }

@@ -462,18 +462,29 @@
     }
 
     async function loadPRData() {
-      const gistId = (window.CONFIG || {}).gistId;
+      const cfg = window.CONFIG || {};
+      const gistId = cfg.gistId;
       if (!gistId || gistId === 'YOUR_GIST_ID') {
         if (window.PR_DATA_EXAMPLE) { prData = window.PR_DATA_EXAMPLE; console.log('[PR] using example data', Object.keys(prData)); }
         return;
       }
-      try {
-        const r = await fetch(`https://api.github.com/gists/${gistId}`);
-        if (!r.ok) return;
-        const gist = await r.json();
-        const file = gist.files['pr-data.json'];
-        if (file) { prData = JSON.parse(file.content); console.log('[PR] data loaded', Object.keys(prData)); }
-      } catch (e) { console.warn('[PR] loadPRData failed', e); }
+      const urls = [];
+      if (cfg.gistUser) urls.push(`https://gist.githubusercontent.com/${cfg.gistUser}/${gistId}/raw/pr-data.json`);
+      urls.push(`https://api.github.com/gists/${gistId}`);
+      for (const url of urls) {
+        try {
+          const r = await fetch(url);
+          if (!r.ok) continue;
+          if (url.includes('/raw/')) {
+            prData = await r.json();
+          } else {
+            const gist = await r.json();
+            const file = gist.files['pr-data.json'];
+            if (file) prData = JSON.parse(file.content);
+          }
+          if (prData) { console.log('[PR] data loaded', Object.keys(prData)); return; }
+        } catch (e) { console.warn('[PR] loadPRData failed', url, e); }
+      }
     }
 
     function hidePRBranches() {
