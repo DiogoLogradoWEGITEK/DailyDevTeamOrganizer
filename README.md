@@ -35,14 +35,14 @@ The `github` field is used by the PR hover feature. Set it to `null` to disable 
 
 All sensitive config is kept in GitHub Actions secrets (**Settings → Secrets and variables → Actions**):
 
-| Secret              | Description                                                                                                                                                                     | Example                                                               |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Secret | Description | Example |
+| --- | --- | --- |
 | `PARTICIPANTS_JSON` | Participants array — injected as `participants.js` at deploy time. Accepts strict JSON, a JS-style array (as in `participants.js`), or the whole `participants.js` file content | `[{"name":"Alice","github":"alice-gh"},{"name":"Bob","github":null}]` |
-| `GH_SEARCH_SCOPE`   | GitHub search scope for PR fetching — space-separated `org:` and/or `repo:` filters                                                                                             | `org:my-org org:another-org`                                          |
-| `PRIMARY_COLOR`     | Hex colour for the theme                                                                                                                                                        | `#0c3ff7`                                                             |
-| `FAVICON_URL`       | URL or relative path to the favicon                                                                                                                                             | `./assets/favicon.ico`                                                |
-| `GIST_ID`           | ID of the GitHub Gist used to cache pre-fetched data (the hash in the Gist URL). The page reads it anonymously; no PAT is needed client-side                                    | `a1b2c3d4e5f6...`                                                     |
-| `GH_TOKEN`          | PAT with `repo` + `gist` scopes — the only credential: searches merged PRs in private repos and lets the workflow update the Gist                                               | `ghp_...`                                                             |
+| `GH_SEARCH_SCOPE` | GitHub search scope for PR fetching — space-separated `org:` and/or `repo:` filters | `org:my-org org:another-org` |
+| `PRIMARY_COLOR` | Hex colour for the theme | `#0c3ff7` |
+| `FAVICON_URL` | URL or relative path to the favicon | `./assets/favicon.ico` |
+| `GIST_ID` | ID of the GitHub Gist used to cache pre-fetched data (the hash in the Gist URL). The page reads it anonymously; no PAT is needed client-side | `a1b2c3d4e5f6...` |
+| `GH_TOKEN` | PAT with `repo` + `gist` scopes — the only credential: searches merged PRs in private repos and lets the workflow update the Gist | `ghp_...` |
 
 ## PR hover feature
 
@@ -56,7 +56,7 @@ To trigger it manually: **Actions → Fetch PR Data → Run workflow**.
 
 ## Workflows
 
-| Workflow            | Schedule                         | Purpose                                                                        |
-| ------------------- | -------------------------------- | ------------------------------------------------------------------------------ |
-| `deploy.yml`        | On push to `main`                | Builds and deploys to GitHub Pages, injects secrets, stamps git SHA as version |
-| `fetch-pr-data.yml` | Mon–Fri 13:23 UTC + jitter | Pre-fetches merged PRs for each participant into the Gist                      |
+| Workflow | Schedule | Purpose |
+| --- | --- | --- |
+| `deploy.yml` | On push to `main` | Builds and deploys to GitHub Pages, injects secrets, stamps git SHA as version |
+| `fetch-pr-data.yml` | Mon–Fri 13:23 UTC + jitter | Pre-fetches merged PRs for each participant into the Gist |
