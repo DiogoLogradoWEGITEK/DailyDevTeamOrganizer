@@ -403,8 +403,8 @@
   <script src="pr-data.example.js"></script>
   <script>
     const TRANSLATIONS = {
-      en: { startBtn: 'Presentation Order', reroll: 'Reroll', hint: 'click a name to pin their PRs · ↑/↓ to switch · Esc to clear · drag cards to reorder', click: 'click on user' },
-      pt: { startBtn: 'Ordem de Apresentação', reroll: 'Reembaralhar', hint: 'clique num nome para fixar os PRs · ↑/↓ para trocar · Esc limpa · arraste os cartões para reordenar', click: 'clique num utilizador' }
+      en: { startBtn: 'Presentation Order', reroll: 'Reroll', hint: 'click a name to pin their PRs · ↑/↓ to switch · Esc to clear · drag cards to reorder', click: 'click on user', noPRs: 'nothing to show for now' },
+      pt: { startBtn: 'Ordem de Apresentação', reroll: 'Reembaralhar', hint: 'clique num nome para fixar os PRs · ↑/↓ para trocar · Esc limpa · arraste os cartões para reordenar', click: 'clique num utilizador', noPRs: 'nada para mostrar por agora' }
     };
     const lang = navigator.language && navigator.language.startsWith('pt') ? 'pt' : 'en';
     const t = TRANSLATIONS[lang];
@@ -627,8 +627,8 @@
 
     function hidePRBranches() {
       panelName = null;
-      if (panelEl.firstElementChild === emptyEl) return;
       emptyEl.textContent = t.click;
+      if (panelEl.firstElementChild === emptyEl) return;
       panelEl.innerHTML = '';
       panelEl.appendChild(emptyEl);
     }
@@ -636,7 +636,15 @@
     function showPRBranches(li, name) {
       const prs = prData && prData[name];
       if (panelName === name) return;
-      if (!prs || !prs.length) { hidePRBranches(); return; }
+      if (!prs || !prs.length) {
+        // Keep the person pinned in the list; explain the empty panel instead
+        // of asking for a click that already happened.
+        panelName = name;
+        emptyEl.textContent = t.noPRs;
+        panelEl.innerHTML = '';
+        panelEl.appendChild(emptyEl);
+        return;
+      }
       panelName = name;
       const isSupport = isQA(name);
       panelEl.innerHTML = '';
