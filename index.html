@@ -27,6 +27,8 @@
     })();
   </script>
   <style>
+    html, body { height: 100%; }
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -81,7 +83,26 @@
       z-index: 0;
     }
 
-    .timer, button, ul {
+    .app {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3vw;
+      position: relative;
+      z-index: 1;
+      width: min(1920px, 98vw);
+      max-height: calc(100vh - 14vh);
+    }
+
+    /* Fixed height once started: PR content can never push the layout around */
+    body.started .app {
+      height: calc(100vh - 14vh);
+    }
+
+    .names-col,
+    .timer,
+    button,
+    ul {
       position: relative;
       z-index: 1;
     }
@@ -90,6 +111,7 @@
       font-size: 4vh;
       font-weight: bold;
       margin-bottom: 2vh;
+      font-variant-numeric: tabular-nums;
     }
 
     button {
@@ -124,7 +146,7 @@
       padding: 1.2vh 2vh;
       background: #ffffff;
       border-radius: 10px;
-      cursor: grab;
+      cursor: pointer;
       border: none;
       border-left: 5px solid var(--cp);
       box-shadow: 0 2px 8px rgba(0,0,0,0.10);
@@ -140,8 +162,22 @@
       transform: translateX(4px);
     }
 
+    li.selected {
+      background: var(--cp-hov);
+      box-shadow: 0 6px 22px rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.45);
+      transform: translateX(4px);
+    }
+
     li.dragging {
       opacity: 0.5;
+    }
+
+    li:focus {
+      outline: none;
+    }
+
+    .li-label {
+      user-select: none;
     }
 
     .top-left-link {
@@ -153,77 +189,141 @@
       width: auto;
     }
 
-    /* ── PR branch overlay ────────────────────────────────────────────────── */
+    /* ── PR panel (right side) ────────────────────────────────────────────────── */
     @keyframes pr-card-in {
       from { opacity: 0; transform: translateX(8px); }
       to   { opacity: 1; transform: translateX(0); }
     }
-    .pr-overlay {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 10;
+    .names-col {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
     }
+
+    .names-col ul {
+      text-align: left;
+    }
+
+    .pr-panel {
+      flex: 1 1 0;
+      min-width: 0;
+      align-self: stretch;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    body:not(.started) .pr-panel {
+      display: none;
+    }
+
+    .pr-panel-inner {
+      flex: 0 0 auto;
+      transform-origin: center;
+    }
+
+    .pr-panel-empty {
+      font-size: clamp(2vh, 3.2vw, 5.5vh);
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.25);
+      text-transform: uppercase;
+      user-select: none;
+      text-align: center;
+    }
+
+    .pr-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: clamp(1.05rem, 1.9vh, 1.9rem);
+      font-weight: 700;
+      color: var(--cp);
+      margin-bottom: 0.9vh;
+    }
+
+    .pr-panel-header .pr-panel-role {
+      font-size: 0.6em;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--cp);
+      border: 1px solid rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.45);
+      background: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.08);
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+
+    .pr-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.2vh 1.2vw;
+      align-items: stretch;
+    }
+
     .pr-branch-card {
-      position: absolute;
-      width: 360px;
-      padding: 14px 16px 12px;
+      flex: 1 1 30%;
+      min-width: 260px;
       background: #fff;
       border-radius: 10px;
       border-left: 4px solid var(--cp);
       box-shadow: 0 4px 18px rgba(0,0,0,0.13);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      padding: 1vh 1.4vh;
+      animation: pr-card-in 0.15s ease both;
     }
+
+    @media (max-width: 1000px) {
+      .pr-cards { flex-direction: column; }
+      .pr-branch-card { min-width: 0; }
+    }
+
     .pr-branch-card .pr-repo {
       display: block;
-      font-size: 0.84rem;
+      font-size: clamp(0.84rem, 1.5vh, 2rem);
       font-weight: 700;
       color: var(--cp);
       text-transform: lowercase;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
       margin-bottom: 3px;
       letter-spacing: 0.02em;
+      overflow-wrap: break-word;
     }
     .pr-branch-card .pr-title {
       display: block;
-      font-size: 1.02rem;
+      font-size: clamp(1.02rem, 1.9vh, 2.6rem);
       font-weight: 600;
       color: #222;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: normal;
+      overflow-wrap: break-word;
     }
     .pr-branch-card .pr-num {
-      font-size: 0.88rem;
+      font-size: 0.86em;
       font-weight: 700;
       color: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.5);
       margin-right: 4px;
     }
     .pr-branch-card .pr-branch-ref {
       display: block;
-      font-size: 0.78rem;
+      font-size: clamp(0.78rem, 1.4vh, 1.9rem);
       font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
       color: #222;
       margin-top: 4px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: normal;
+      overflow-wrap: break-word;
     }
     .pr-branch-card .pr-branch-arrow { margin: 0 4px; color: #222; }
     .pr-branch-card .pr-body {
-      margin-top: 10px;
-      font-size: 0.84rem;
+      margin-top: 0.7vh;
+      font-size: clamp(0.84rem, 1.5vh, 2rem);
       font-weight: 400;
       color: #222;
-      line-height: 1.55;
-      display: -webkit-box;
-      -webkit-line-clamp: 5;
-      line-clamp: 5;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      line-height: 1.5;
       white-space: normal;
+      overflow-wrap: break-word;
     }
     /* QA / Support card variant */
     .pr-branch-card--qa { border-left-color: #059669; }
@@ -247,12 +347,28 @@
     .pr-branch-card--qa .pr-num          { color: rgba(5,150,105,0.5); }
     .pr-branch-card--qa .pr-branch-ref   { color: #222; }
     .pr-branch-card--qa .pr-branch-arrow { color: #222; }
-    .pr-lines {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      overflow: visible;
+    .pr-branch-card--qa::before { display: none; }
+    .pr-panel-header--qa,
+    .pr-panel-header--qa .pr-panel-role { color: #059669; }
+    .pr-panel-header--qa .pr-panel-role {
+      border-color: rgba(5,150,105,0.45);
+      background: rgba(5,150,105,0.08);
+    }
+    .footer {
+      position: fixed;
+      bottom: 10px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      align-items: baseline;
+      gap: 1.5em;
+      font-size: 0.7rem;
+      font-family: monospace;
+      color: #667;
+      opacity: 0.5;
+      pointer-events: none;
+      z-index: 9999;
     }
 
   </style>
@@ -261,18 +377,23 @@
 
   <div class="blob-mid"></div>
   <img src="./assets/wedigitek.png" alt="Logo" class="top-left-link" id="logo">
-<div class="timer" id="timer">00:00</div>
+  <div class="timer" id="timer">00:00</div>
 
-  <button id="startBtn" onclick="startSession()"></button>
-  <ul id="nameList" style="display:none;"></ul>
+  <div class="app">
+    <div class="names-col">
+      <button id="startBtn" onclick="startSession()"></button>
+      <ul id="nameList" style="display:none;"></ul>
+    </div>
+    <div class="pr-panel" id="prPanel"></div>
+  </div>
 
   <script src="participants.js"></script>
   <script src="participants.example.js"></script>
   <script src="pr-data.example.js"></script>
   <script>
     const TRANSLATIONS = {
-      en: { startBtn: 'Presentation Order', reroll: 'Reroll' },
-      pt: { startBtn: 'Ordem de Apresentação', reroll: 'Reembaralhar' }
+      en: { startBtn: 'Presentation Order', reroll: 'Reroll', hint: 'click a name to pin their PRs · ↑/↓ to switch · Esc to clear · drag cards to reorder', click: 'click on user' },
+      pt: { startBtn: 'Ordem de Apresentação', reroll: 'Reembaralhar', hint: 'clique num nome para fixar os PRs · ↑/↓ para trocar · Esc limpa · arraste os cartões para reordenar', click: 'clique num utilizador' }
     };
     const lang = navigator.language && navigator.language.startsWith('pt') ? 'pt' : 'en';
     const t = TRANSLATIONS[lang];
@@ -283,7 +404,14 @@
 
     document.getElementById('startBtn').textContent = t.startBtn;
 
-    const participants = (window.PARTICIPANTS || []).map(p =>
+    // Local preview (no Gist configured): always show the example members with
+    // the example PR data — never real names without matching PRs.
+    const previewCfg = window.CONFIG || {};
+    const localPreview = !previewCfg.gistId || previewCfg.gistId === 'YOUR_GIST_ID';
+    const sourceList = localPreview && window.PARTICIPANTS_EXAMPLE
+      ? window.PARTICIPANTS_EXAMPLE
+      : (window.PARTICIPANTS || []);
+    const participants = sourceList.map(p =>
       typeof p === 'string' ? { name: p, github: null } : p
     );
     const names = participants.map(p => p.name);
@@ -292,6 +420,9 @@
     window.__prData = () => prData; // debug helper
 
     const listEl = document.getElementById("nameList");
+    const panelEl = document.getElementById("prPanel");
+    const emptyEl = document.createElement('div');
+    emptyEl.className = 'pr-panel-empty';
 
     let seconds = 0;
     let timerInterval = null;
@@ -314,29 +445,90 @@
       document.getElementById("timer").textContent = "00:00";
     }
 
+    // Pinned speaker: click a name (or use arrow keys) so the PRs stay up
+    // without holding the mouse still during the call.
+    let selectedIdx = -1;
+
     let prHoverTimer = null;
     function displayNames(arr) {
       listEl.innerHTML = "";
-      arr.forEach((name) => {
+      selectedIdx = -1;
+      arr.forEach((name, i) => {
         const li = document.createElement("li");
-        li.textContent = name;
+        li.tabIndex = 0;
         li.setAttribute("draggable", "true");
         addDragAndDropHandlers(li);
+        const liLabel = document.createElement("span");
+        liLabel.className = "li-label";
+        liLabel.textContent = name;
+        li.appendChild(liLabel);
+        li.addEventListener('click', () => selectParticipant(i));
+        li.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectParticipant(i); }
+        });
         li.addEventListener('mouseenter', () => {
           prHoverTimer = setTimeout(() => showPRBranches(li, name), 150);
         });
         li.addEventListener('mouseleave', () => {
           clearTimeout(prHoverTimer);
-          hidePRBranches();
+          restoreSelection();
         });
         listEl.appendChild(li);
       });
     }
 
+    function selectParticipant(i) {
+      const items = listEl.children;
+      if (i < 0 || i >= items.length) return;
+      if (selectedIdx >= 0 && items[selectedIdx]) items[selectedIdx].classList.remove('selected');
+      if (selectedIdx === i) {
+        selectedIdx = -1;
+        hidePRBranches();
+      } else {
+        selectedIdx = i;
+        items[i].classList.add('selected');
+        items[i].focus({ preventScroll: true });
+        showPRBranches(items[i], items[i].querySelector('.li-label').textContent);
+      }
+    }
+
+    function moveSelection(dir) {
+      const items = listEl.children;
+      if (!items.length) return;
+      let i = selectedIdx < 0 ? (dir > 0 ? 0 : items.length - 1) : selectedIdx + dir;
+      if (i < 0) i = items.length - 1;
+      if (i >= items.length) i = 0;
+      selectParticipant(i);
+    }
+
+    function restoreSelection() {
+      const items = listEl.children;
+      if (selectedIdx >= 0 && items[selectedIdx]) {
+        showPRBranches(items[selectedIdx], items[selectedIdx].querySelector('.li-label').textContent);
+      } else {
+        hidePRBranches();
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (listEl.style.display === 'none') return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); moveSelection(1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); moveSelection(-1); }
+      else if (e.key === 'Escape' && selectedIdx >= 0) {
+        listEl.children[selectedIdx].classList.remove('selected');
+        selectedIdx = -1;
+        hidePRBranches();
+      }
+    });
+
     function addDragAndDropHandlers(item) {
       item.addEventListener("dragstart", () => {
         item.classList.add("dragging");
-        hidePRBranches();
+        if (item.classList.contains('selected')) {
+          item.classList.remove('selected');
+          selectedIdx = -1;
+        }
+        restoreSelection();
       });
 
       item.addEventListener("dragend", () => {
@@ -363,7 +555,7 @@
     function updateArrayFromDOM() {
       const items = document.querySelectorAll("#nameList li");
       names.length = 0;
-      items.forEach(li => names.push(li.textContent));
+      items.forEach(li => names.push(li.querySelector('.li-label').textContent));
     }
 
     function shuffle(array) {
@@ -377,11 +569,16 @@
     loadPRData();
 
     async function startSession() {
+      hidePRBranches();
       shuffle(names);
       displayNames(names);
       listEl.style.display = "block";
       startTimer();
       document.getElementById("startBtn").textContent = t.reroll;
+      document.body.classList.add('started');
+      const hintEl = document.getElementById('hint');
+      hintEl.textContent = t.hint;
+      hintEl.style.display = '';
     }
 
     async function loadPRData() {
@@ -411,91 +608,52 @@
     }
 
     function hidePRBranches() {
-      document.getElementById('prOverlay')?.remove();
-      document.getElementById('prOverlaySvg')?.remove();
+      emptyEl.textContent = t.click;
+      panelEl.innerHTML = '';
+      panelEl.appendChild(emptyEl);
     }
 
     function showPRBranches(li, name) {
-      hidePRBranches();
       const prs = prData && prData[name];
-      if (!prs || !prs.length) return;
-      const displayPrs = prs.slice(0, 3);
-      const rect = li.getBoundingClientRect();
-      const liCY = rect.top + rect.height / 2;
-      const cardW = 360;
-      const cardRight = rect.left - 72;
-      const cardGap = 12;
-      const isSupport = ((prData._roles || {})[name]) === 'support';
-      const isLastChild = li.parentElement && li === li.parentElement.lastElementChild;
-      const color = getComputedStyle(document.documentElement).getPropertyValue('--cp').trim();
+      const isSupport = ((prData && prData._roles || {})[name]) === 'support';
+      panelEl.innerHTML = '';
 
-      // SVG layer for branch lines
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('class', 'pr-lines');
-      const svgLayer = document.createElement('div');
-      svgLayer.id = 'prOverlaySvg';
-      svgLayer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2;';
-      svgLayer.appendChild(svg);
-      document.body.appendChild(svgLayer);
+      const role = isSupport ? 'QA' : null;
+      const header = document.createElement('div');
+      header.className = 'pr-panel-header' + (isSupport ? ' pr-panel-header--qa' : '');
+      header.innerHTML = escapeHtml(name) + (role ? ` <span class="pr-panel-role">${role}</span>` : '');
 
-      // Card overlay
-      const overlay = document.createElement('div');
-      overlay.className = 'pr-overlay';
-      overlay.id = 'prOverlay';
-      document.body.appendChild(overlay);
+      const inner = document.createElement('div');
+      inner.className = 'pr-panel-inner';
+      inner.appendChild(header);
 
-      // Create cards hidden for measurement
-      const cards = displayPrs.map((pr) => {
+      const cards = document.createElement('div');
+      cards.className = 'pr-cards';
+
+      (prs || []).forEach((pr, idx) => {
         const card = document.createElement('div');
         card.className = 'pr-branch-card' + (isSupport ? ' pr-branch-card--qa' : '');
-        card.style.cssText = `left:${cardRight - cardW}px; top:0; visibility:hidden;`;
+        card.style.animationDelay = `${idx * 0.07}s`;
         card.innerHTML =
           `<span class="pr-repo">${escapeHtml(pr.repo || '')}</span>` +
           (pr.branch ? `<span class="pr-branch-ref">${escapeHtml(pr.branch)}<span class="pr-branch-arrow">→</span>${escapeHtml(pr.baseBranch || 'main')}</span>` : '') +
           `<span class="pr-title"><span class="pr-num">#${pr.number}</span>${escapeHtml(pr.title)}</span>` +
           (pr.body ? `<div class="pr-body">${escapeHtml(pr.body)}</div>` : '');
-        overlay.appendChild(card);
-        return card;
+        cards.appendChild(card);
       });
 
-      // Measure, position, then animate
+      inner.appendChild(cards);
+      panelEl.appendChild(inner);
+
+      // Scale down only if the cards would overflow the viewport — everything
+      // stays inside the borders, no scrolling, text stays legible.
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          const heights = cards.map(c => c.offsetHeight);
-          const totalH = heights.reduce((s, h) => s + h, 0) + cardGap * (cards.length - 1);
-          let y = liCY - totalH / 2;
-          if (isLastChild) y -= 38;
-
-          // Keep cards inside viewport so the lowest card doesn't get cropped on calls/screenshares.
-          const viewportPadding = 12;
-          const maxY = window.innerHeight - totalH - viewportPadding;
-          y = Math.max(viewportPadding, Math.min(y, maxY));
-
-          cards.forEach((card, idx) => {
-            const h = heights[idx];
-            const cardCY = y + h / 2;
-            card.style.top = `${y}px`;
-            card.style.visibility = '';
-            card.style.animation = `pr-card-in 0.15s ease ${0.18 + idx * 0.07}s both`;
-
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', rect.left); line.setAttribute('y1', liCY);
-            line.setAttribute('x2', cardRight);  line.setAttribute('y2', cardCY);
-            const lineLen = Math.hypot(rect.left - cardRight, liCY - cardCY);
-            line.setAttribute('stroke', color); line.setAttribute('stroke-width', '1.5');
-            line.style.strokeDasharray = lineLen;
-            line.style.strokeDashoffset = lineLen;
-            svg.appendChild(line);
-
-            setTimeout(() => {
-              requestAnimationFrame(() => {
-                line.style.transition = 'stroke-dashoffset 0.18s ease-out';
-                line.style.strokeDashoffset = 0;
-              });
-            }, idx * 70);
-
-            y += h + cardGap;
-          });
+          const h = inner.scrollHeight;
+          const maxH = panelEl.clientHeight;
+          if (h > maxH && maxH > 0 && h > 0) {
+            inner.style.transform = `scale(${Math.max(0.55, maxH / h)})`;
+          }
         });
       });
     }
@@ -506,7 +664,10 @@
 
   </script>
 
-  <div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);font-size:0.65rem;opacity:0.35;font-family:monospace;pointer-events:none;z-index:9999">__VERSION__</div>
+  <div class="footer">
+    <span id="hint" style="display:none"></span>
+    <span>__VERSION__</span>
+  </div>
 
 </body>
 </html>

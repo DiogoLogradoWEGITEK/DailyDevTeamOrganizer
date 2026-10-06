@@ -7,8 +7,12 @@ A lightweight GitHub Pages tool for daily standups. Shuffles participants, shows
 - Random shuffle (Fisher-Yates) on each session start
 - Live session timer
 - Drag-and-drop reordering after shuffle
-- VS Code-styled code bubble showing the shuffle algorithm
-- **PR branch hover** — hover a participant name to see up to 3 recent merged PR cards fanned out to the left, each with its own animated branch line showing `branch → base`; displays PR body text or falls back to commit message headlines when no body is written; data is pre-fetched daily by a scheduled workflow
+- **PR panel** — the presentation list sits on the left; clicking a name pins their recent PRs on the right, full-width and untruncated: repo name, `branch → base`, PR number, title and the whole description. Hover still previews, click/`↑`/`↓` keeps it pinned, `Esc` clears
+- Displays PR body text or falls back to commit message headlines when no body is written; data is pre-fetched daily by a scheduled workflow
+
+## Local preview
+
+Open `index.html` in a browser — no server needed. With no Gist configured (the `GIST_ID` secret is only injected on the deployed Pages site), the page automatically shows the example members (Alice, Bob, Carol) with the example PR data from `pr-data.example.js`, so local preview never mixes real team names with mock PRs.
 
 ## Configuring participants
 
@@ -48,7 +52,7 @@ All sensitive config is kept in GitHub Actions secrets (**Settings → Secrets a
 
 A scheduled workflow (`.github/workflows/fetch-pr-data.yml`) runs Monday–Friday at 13:23 UTC (14:23 Lisbon in summer, 13:23 in winter — always inside the 12:00–15:00 window) with a small random jitter, so the data is fresh for the daily. It uses the GitHub GraphQL API to fetch each participant's 3 most recent merged PRs — title, body, branch name, target branch, and the last 5 commit message headlines. If a PR has no body, the commit headlines are joined and used as the description instead. Results are saved as `pr-data.json` in the Gist.
 
-The page fetches `pr-data.json` silently on load. Hovering a name shows up to 3 PR cards fanned to the left of the list, each connected by its own animated branch line. Cards appear staggered after the lines finish drawing. Each card shows the repo name, `branch → target`, PR number and title, and body (or commit headlines as fallback).
+The page fetches `pr-data.json` silently on load. Click a name to pin their PR panel on the right side of the screen — it stays up (no mouse needed) until you click again or pick someone else. Hovering a name still gives a quick preview. Each card shows the repo name, `branch → base`, PR number and title, and the full body text (or commit headlines as fallback).
 
 For **local preview without a Gist**, `pr-data.example.js` is loaded automatically when no `gistId` is configured and provides mock data matching the example participants.
 
