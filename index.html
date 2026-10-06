@@ -168,6 +168,17 @@
       transform: translateX(4px);
     }
 
+    /* QA / Support members carry the green identity in the list itself */
+    li.qa { border-left-color: #059669; }
+    li.qa:hover,
+    li.qa.selected {
+      background: #d2ece4;
+      box-shadow: 0 6px 20px rgba(5,150,105,0.32);
+    }
+    li.qa.selected {
+      box-shadow: 0 6px 22px rgba(5,150,105,0.45);
+    }
+
     li.dragging {
       opacity: 0.5;
     }
@@ -416,6 +427,10 @@
     );
     const names = participants.map(p => p.name);
     const participantByName = Object.fromEntries(participants.map(p => [p.name, p]));
+    function isQA(name) {
+      return ((prData && prData._roles) || {})[name] === 'support' ||
+        (participantByName[name] || {}).role === 'support';
+    }
     let prData = null;
     window.__prData = () => prData; // debug helper
 
@@ -423,6 +438,8 @@
     const panelEl = document.getElementById("prPanel");
     const emptyEl = document.createElement('div');
     emptyEl.className = 'pr-panel-empty';
+    // Name currently rendered in the PR panel — guards against no-op re-renders (flicker)
+    let panelName = null;
 
     let seconds = 0;
     let timerInterval = null;
@@ -457,6 +474,7 @@
         const li = document.createElement("li");
         li.tabIndex = 0;
         li.setAttribute("draggable", "true");
+        if (isQA(name)) li.classList.add('qa');
         addDragAndDropHandlers(li);
         const liLabel = document.createElement("span");
         liLabel.className = "li-label";
@@ -602,12 +620,14 @@
             const file = gist.files['pr-data.json'];
             if (file) prData = JSON.parse(file.content);
           }
-          if (prData) { console.log('[PR] data loaded', Object.keys(prData)); return; }
+          if (prData) { panelName = null; console.log('[PR] data loaded', Object.keys(prData)); return; }
         } catch (e) { console.warn('[PR] loadPRData failed', url, e); }
       }
     }
 
     function hidePRBranches() {
+      panelName = null;
+      if (panelEl.firstElementChild === emptyEl) return;
       emptyEl.textContent = t.click;
       panelEl.innerHTML = '';
       panelEl.appendChild(emptyEl);
@@ -615,7 +635,10 @@
 
     function showPRBranches(li, name) {
       const prs = prData && prData[name];
-      const isSupport = ((prData && prData._roles || {})[name]) === 'support';
+      if (panelName === name) return;
+      if (!prs || !prs.length) { hidePRBranches(); return; }
+      panelName = name;
+      const isSupport = isQA(name);
       panelEl.innerHTML = '';
 
       const role = isSupport ? 'QA' : null;
