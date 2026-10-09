@@ -480,10 +480,6 @@
         liLabel.className = "li-label";
         liLabel.textContent = name;
         li.appendChild(liLabel);
-        li.addEventListener('click', () => selectParticipant(i));
-        li.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectParticipant(i); }
-        });
         li.addEventListener('mouseenter', () => {
           prHoverTimer = setTimeout(() => showPRBranches(li, name), 150);
         });
@@ -493,10 +489,19 @@
         });
         listEl.appendChild(li);
       });
+      listEl.addEventListener('click', (e) => {
+        const li = e.target.closest('li');
+        if (li) selectParticipant(li);
+      });
+      listEl.addEventListener('keydown', (e) => {
+        const li = e.target.closest('li');
+        if (li && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); selectParticipant(li); }
+      });
     }
 
-    function selectParticipant(i) {
+    function selectParticipant(target) {
       const items = listEl.children;
+      const i = typeof target === 'number' ? target : Array.prototype.indexOf.call(items, target);
       if (i < 0 || i >= items.length) return;
       if (selectedIdx >= 0 && items[selectedIdx]) items[selectedIdx].classList.remove('selected');
       if (selectedIdx === i) {
@@ -542,10 +547,9 @@
     function addDragAndDropHandlers(item) {
       item.addEventListener("dragstart", () => {
         item.classList.add("dragging");
-        if (item.classList.contains('selected')) {
-          item.classList.remove('selected');
-          selectedIdx = -1;
-        }
+        const prevSelected = listEl.children[selectedIdx];
+        if (prevSelected) prevSelected.classList.remove('selected');
+        selectedIdx = -1;
         restoreSelection();
       });
 
