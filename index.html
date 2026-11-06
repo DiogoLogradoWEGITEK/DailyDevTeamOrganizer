@@ -232,9 +232,12 @@
       display: none;
     }
 
+    /* --fit is a font multiplier picked by fitPanel(): every PR font size is
+       multiplied by it so the cards fill the panel by reflowing, instead of
+       being transform-scaled (which leaves empty gutters at the sides). */
     .pr-panel-inner {
       flex: 0 0 auto;
-      transform-origin: center;
+      --fit: 1;
     }
 
     .pr-panel-empty {
@@ -251,10 +254,10 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: clamp(1.05rem, 1.9vh, 1.9rem);
+      font-size: calc(clamp(1.05rem, 1.9vh, 1.9rem) * var(--fit, 1));
       font-weight: 700;
       color: var(--cp);
-      margin-bottom: 0.9vh;
+      margin-bottom: calc(0.9vh * var(--fit, 1));
     }
 
     .pr-panel-header .pr-panel-role {
@@ -273,29 +276,32 @@
       display: flex;
       flex-wrap: wrap;
       gap: 1.2vh 1.2vw;
-      align-items: stretch;
+      align-items: flex-start;
     }
 
     .pr-branch-card {
-      flex: 1 1 30%;
+      box-sizing: border-box;
+      flex: 1 1 0;
       min-width: 260px;
+      /* Cap the measure (~75 chars/line) so a lone PR doesn't span the panel */
+      max-width: calc(60vh * var(--fit, 1));
       background: #fff;
       border-radius: 10px;
       border-left: 4px solid var(--cp);
       box-shadow: 0 4px 18px rgba(0,0,0,0.13);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      padding: 1vh 1.4vh;
+      padding: calc(1vh * var(--fit, 1)) calc(1.4vh * var(--fit, 1));
       animation: pr-card-in 0.15s ease both;
     }
 
     @media (max-width: 1000px) {
-      .pr-cards { flex-direction: column; }
-      .pr-branch-card { min-width: 0; }
+      .pr-cards { flex-direction: column; align-items: stretch; }
+      .pr-branch-card { flex: 0 0 auto; min-width: 0; max-width: none; }
     }
 
     .pr-branch-card .pr-repo {
       display: block;
-      font-size: clamp(0.84rem, 1.5vh, 2rem);
+      font-size: calc(clamp(0.84rem, 1.5vh, 2rem) * var(--fit, 1));
       font-weight: 700;
       color: var(--cp);
       text-transform: lowercase;
@@ -305,7 +311,7 @@
     }
     .pr-branch-card .pr-title {
       display: block;
-      font-size: clamp(1.02rem, 1.9vh, 2.6rem);
+      font-size: calc(clamp(1.02rem, 1.9vh, 2.6rem) * var(--fit, 1));
       font-weight: 600;
       color: #222;
       white-space: normal;
@@ -319,7 +325,7 @@
     }
     .pr-branch-card .pr-branch-ref {
       display: block;
-      font-size: clamp(0.78rem, 1.4vh, 1.9rem);
+      font-size: calc(clamp(0.78rem, 1.4vh, 1.9rem) * var(--fit, 1));
       font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
       color: #222;
       margin-top: 4px;
@@ -328,8 +334,8 @@
     }
     .pr-branch-card .pr-branch-arrow { margin: 0 4px; color: #222; }
     .pr-branch-card .pr-body {
-      margin-top: 0.7vh;
-      font-size: clamp(0.84rem, 1.5vh, 2rem);
+      margin-top: calc(0.7vh * var(--fit, 1));
+      font-size: calc(clamp(0.84rem, 1.5vh, 2rem) * var(--fit, 1));
       font-weight: 400;
       color: #222;
       line-height: 1.5;
@@ -433,6 +439,22 @@
     }
     let prData = null;
     window.__prData = () => prData; // debug helper
+
+    // Display gate: the Gist keeps full PR text; the panel caps long
+    // descriptions so one verbose PR can't shrink everyone's cards to
+    // unreadable. CONFIG.prBodyMaxChars overrides it; 0 disables the gate.
+    const PR_BODY_MAX_CHARS = Number.isInteger(previewCfg.prBodyMaxChars) && previewCfg.prBodyMaxChars >= 0
+      ? previewCfg.prBodyMaxChars
+      : 600;
+    function clampText(text, max) {
+      const s = String(text).trim();
+      if (!max || s.length <= max) return s;
+      const cut = s.slice(0, max);
+      const lastSpace = cut.lastIndexOf(' ');
+      // Prefer a word boundary unless that throws away too much text.
+      const kept = lastSpace > max * 0.7 ? cut.slice(0, lastSpace) : cut;
+      return kept.replace(/[\s.,;:·\-–—]+$/, '') + '…';
+    }
 
     const listEl = document.getElementById("nameList");
     const panelEl = document.getElementById("prPanel");
@@ -673,25 +695,46 @@
           `<span class="pr-repo">${escapeHtml(pr.repo || '')}</span>` +
           (pr.branch ? `<span class="pr-branch-ref">${escapeHtml(pr.branch)}<span class="pr-branch-arrow">→</span>${escapeHtml(pr.baseBranch || 'main')}</span>` : '') +
           `<span class="pr-title"><span class="pr-num">#${pr.number}</span>${escapeHtml(pr.title)}</span>` +
-          (pr.body ? `<div class="pr-body">${escapeHtml(pr.body)}</div>` : '');
+          (pr.body ? `<div class="pr-body">${escapeHtml(clampText(pr.body, PR_BODY_MAX_CHARS))}</div>` : '');
         cards.appendChild(card);
       });
 
       inner.appendChild(cards);
       panelEl.appendChild(inner);
 
-      // Scale down only if the cards would overflow the viewport — everything
-      // stays inside the borders, no scrolling, text stays legible.
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const h = inner.scrollHeight;
-          const maxH = panelEl.clientHeight;
-          if (h > maxH && maxH > 0 && h > 0) {
-            inner.style.transform = `scale(${Math.max(0.55, maxH / h)})`;
-          }
-        });
-      });
+      fitPanel();
     }
+
+    // Pick the largest font multiplier (within FIT_MIN..FIT_MAX) whose layout
+    // fits the panel: long PRs reflow smaller, short ones read bigger on a
+    // shared screen. Below FIT_MIN text would be illegible, so anything still
+    // too tall is clipped by the panel's overflow: hidden.
+    const FIT_MIN = 0.6;
+    const FIT_MAX = 1.3;
+    const FIT_FILL = 0.92; // leave some breathing room above and below
+    function fitPanel() {
+      const inner = panelEl.querySelector('.pr-panel-inner');
+      const maxH = panelEl.clientHeight * FIT_FILL;
+      if (!inner || maxH <= 0) return;
+      const fits = (f) => {
+        inner.style.setProperty('--fit', f);
+        return inner.offsetHeight <= maxH;
+      };
+      if (fits(FIT_MAX)) return;
+      if (!fits(FIT_MIN)) return;
+      let lo = FIT_MIN, hi = FIT_MAX;
+      for (let i = 0; i < 7; i++) { // ~0.005 precision
+        const mid = (lo + hi) / 2;
+        if (fits(mid)) lo = mid; else hi = mid;
+      }
+      inner.style.setProperty('--fit', lo.toFixed(3));
+    }
+
+    let fitFrame = 0;
+    window.addEventListener('resize', () => {
+      cancelAnimationFrame(fitFrame);
+      fitFrame = requestAnimationFrame(fitPanel);
+    });
 
     function escapeHtml(s) {
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

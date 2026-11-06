@@ -7,8 +7,8 @@ A lightweight GitHub Pages tool for daily standups. Shuffles participants, shows
 - Random shuffle (Fisher-Yates) on each session start
 - Live session timer
 - Drag-and-drop reordering after shuffle
-- **PR panel** — the presentation list sits on the left; clicking a name pins their recent PRs on the right, full-width and untruncated: repo name, `branch → base`, PR number, title and the whole description. Hover still previews, click/`↑`/`↓` keeps it pinned, `Esc` clears
-- Displays PR body text or falls back to commit message headlines when no body is written; data is pre-fetched daily by a scheduled workflow
+- **PR panel** — the presentation list sits on the left; clicking a name pins their recent PRs on the right, sized to fill the panel: repo name, `branch → base`, PR number, title and description. Text scales with the screen and the amount of content (bigger for short PRs, smaller for long ones) and refits on window resize. Hover still previews, click/`↑`/`↓` keeps it pinned, `Esc` clears
+- Displays PR body text or falls back to commit subject lines when no body is written; data is pre-fetched daily by a scheduled workflow and stored in full — descriptions longer than 600 characters are cut with `…` only at display time (`prBodyMaxChars` in `CONFIG`, `0` disables the cut)
 
 ## Local preview
 
@@ -50,9 +50,9 @@ All sensitive config is kept in GitHub Actions secrets (**Settings → Secrets a
 
 ## PR hover feature
 
-A scheduled workflow (`.github/workflows/fetch-pr-data.yml`) runs Monday–Friday at 13:23 UTC (14:23 Lisbon in summer, 13:23 in winter — always inside the 12:00–15:00 window) with a small random jitter, so the data is fresh for the daily. It uses the GitHub GraphQL API to fetch each participant's 3 most recent merged PRs — title, body, branch name, target branch, and the last 5 commit message headlines. If a PR has no body, the commit headlines are joined and used as the description instead. Results are saved as `pr-data.json` in the Gist.
+A scheduled workflow (`.github/workflows/fetch-pr-data.yml`) runs Monday–Friday at 13:23 UTC (14:23 Lisbon in summer, 13:23 in winter — always inside the 12:00–15:00 window) with a small random jitter, so the data is fresh for the daily. It uses the GitHub GraphQL API to fetch each participant's 3 most recent merged PRs — title, body, branch name, target branch, and the last 5 commit messages. Bodies are stored in full, with markdown symbols and `<!-- -->` template comments stripped. If a PR has no body, the full first line of each commit message is joined and used as the description instead. Results are saved as `pr-data.json` in the Gist.
 
-The page fetches `pr-data.json` silently on load. Click a name to pin their PR panel on the right side of the screen — it stays up (no mouse needed) until you click again or pick someone else. Hovering a name still gives a quick preview. Each card shows the repo name, `branch → base`, PR number and title, and the full body text (or commit headlines as fallback).
+The page fetches `pr-data.json` silently on load. Click a name to pin their PR panel on the right side of the screen — it stays up (no mouse needed) until you click again or pick someone else. Hovering a name still gives a quick preview. Each card shows the repo name, `branch → base`, PR number and title, and the body text (or commit subject lines as fallback), capped at 600 characters on screen.
 
 For **local preview without a Gist**, `pr-data.example.js` is loaded automatically when no `gistId` is configured and provides mock data matching the example participants.
 
