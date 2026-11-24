@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>Daily Dev</title>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Internal team tool: keep it out of search engines and AI crawlers -->
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
   <link rel="icon" type="image/x-icon" href="assets/favicon.ico" id="favicon">
@@ -29,381 +30,358 @@
     })();
   </script>
   <style>
-    html, body { height: 100%; }
+    :root {
+      --ink: #1b2130;
+      --ink-soft: #2c3445;
+      --muted: #6b7385;
+      --line: #e3e7ef;
+      --surface: #ffffff;
+      --chip: #f2f4f8;
+      --qa: #059669;
+      --qa-bg: #e3f4ee;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
 
     body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--ink);
       background: var(--cp-bg);
-      text-align: center;
       overflow: hidden;
     }
 
-    body::before,
-    body::after {
-      content: '';
-      position: fixed;
-      border-radius: 50%;
-      z-index: 0;
-      pointer-events: none;
+    button { font: inherit; }
+
+    /* Whole app fits the window: top bar + (order | speaker) below it */
+    .shell {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
     }
 
-    body::before {
-      width: 60vw;
-      height: 60vw;
-      top: -20vw;
-      left: -15vw;
-      background: radial-gradient(circle, rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.18) 0%, transparent 70%);
-      filter: blur(40px);
-    }
-
-    body::after {
-      width: 50vw;
-      height: 50vw;
-      bottom: -15vw;
-      right: -10vw;
-      background: radial-gradient(circle, rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.13) 0%, transparent 70%);
-      filter: blur(50px);
-    }
-
-    .blob-mid {
-      position: fixed;
-      width: 35vw;
-      height: 35vw;
-      top: 50%;
-      left: 60%;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      background: radial-gradient(circle, rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.08) 0%, transparent 70%);
-      filter: blur(35px);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .app {
-      display: flex;
+    /* ── Top bar: logo · timer · roll ─────────────────────────────────────── */
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      justify-content: center;
-      gap: 3vw;
-      position: relative;
-      z-index: 1;
-      width: min(1920px, 98vw);
-      max-height: calc(100vh - 14vh);
+      gap: 16px;
+      padding: 1.3vh 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
     }
 
-    /* Fixed height once started: PR content can never push the layout around */
-    body.started .app {
-      height: calc(100vh - 14vh);
-    }
-
-    .names-col,
-    .timer,
-    button,
-    ul {
-      position: relative;
-      z-index: 1;
-    }
-
-    .timer {
-      font-size: 4vh;
-      font-weight: bold;
-      margin-bottom: 2vh;
-      font-variant-numeric: tabular-nums;
-    }
-
-    button {
-      font-size: 2.5vh;
-      padding: 1vh 2vh;
-      margin-bottom: 2vh;
-      cursor: pointer;
-      border: 2px solid var(--cp);
-      background: var(--cp);
-      color: white;
-      border-radius: 6px;
-      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-    }
-
-    button:hover {
-      background: var(--cp-dark);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 18px rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.45);
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      font-size: 3.5vh;
-    }
-
-    li {
-      position: relative;
-      z-index: 4;
-      margin: 1.2vh 0;
-      padding: 1.2vh 2vh;
-      background: #ffffff;
-      border-radius: 10px;
-      cursor: pointer;
-      border: none;
-      border-left: 5px solid var(--cp);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      color: #222;
-      transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
-    }
-
-    li:hover {
-      background: var(--cp-hov);
-      box-shadow: 0 6px 20px rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.32);
-      transform: translateX(4px);
-    }
-
-    li.selected {
-      background: var(--cp-hov);
-      box-shadow: 0 6px 22px rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.45);
-      transform: translateX(4px);
-    }
-
-    /* QA / Support members carry the green identity in the list itself */
-    li.qa { border-left-color: #059669; }
-    li.qa:hover,
-    li.qa.selected {
-      background: #d2ece4;
-      box-shadow: 0 6px 20px rgba(5,150,105,0.32);
-    }
-    li.qa.selected {
-      box-shadow: 0 6px 22px rgba(5,150,105,0.45);
-    }
-
-    li.dragging {
-      opacity: 0.5;
-    }
-
-    li:focus {
-      outline: none;
-    }
-
-    .li-label {
-      user-select: none;
-    }
-
-    .top-left-link {
-      position: fixed;
-      top: 24px;
-      left: 24px;
-      z-index: 1000;
-      height: 32px;
+    .logo {
+      justify-self: start;
+      height: clamp(22px, 3.2vh, 34px);
       width: auto;
     }
 
-    /* ── PR panel (right side) ────────────────────────────────────────────────── */
-    @keyframes pr-card-in {
-      from { opacity: 0; transform: translateX(8px); }
-      to   { opacity: 1; transform: translateX(0); }
+    .timer {
+      font-size: clamp(26px, 4.6vh, 48px);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+      line-height: 1;
     }
-    .names-col {
-      flex: 0 0 auto;
+
+    body:not(.started) .timer { color: var(--muted); opacity: 0.45; }
+
+    .roll-btn {
+      justify-self: end;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5em;
+      font-size: clamp(14px, 2vh, 19px);
+      font-weight: 600;
+      padding: 0.6em 1.1em;
+      border: 0;
+      border-radius: 10px;
+      background: var(--cp);
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+
+    .roll-btn:hover {
+      background: var(--cp-dark);
+      box-shadow: 0 4px 14px rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.35);
+    }
+
+    .roll-btn:focus-visible {
+      outline: 3px solid rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.35);
+      outline-offset: 2px;
+    }
+
+    .roll-btn svg { width: 1.1em; height: 1.1em; flex: none; }
+
+    .main {
+      display: grid;
+      grid-template-columns: clamp(220px, 19vw, 340px) minmax(0, 1fr);
+      min-height: 0;
+    }
+
+    /* ── Order (left) ─────────────────────────────────────────────────────── */
+    .sidebar {
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      min-width: 0;
+      min-height: 0;
+      padding: 2vh 14px 12px;
+      background: var(--surface);
+      border-right: 1px solid var(--line);
     }
 
-    .names-col ul {
-      text-align: left;
-    }
-
-    .pr-panel {
-      flex: 1 1 0;
-      min-width: 0;
-      align-self: stretch;
-      text-align: left;
+    .people {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      flex: 1 1 auto;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      overflow: hidden;
+      gap: 4px;
     }
 
-    body:not(.started) .pr-panel {
-      display: none;
+    .people-empty {
+      flex: 1 1 auto;
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 14px;
     }
 
-    /* --fit is a font multiplier picked by fitPanel(): every PR font size is
-       multiplied by it so the cards fill the panel by reflowing, instead of
-       being transform-scaled (which leaves empty gutters at the sides). */
-    .pr-panel-inner {
-      flex: 0 0 auto;
-      --fit: 1;
-    }
-
-    .pr-panel-empty {
-      font-size: clamp(2vh, 3.2vw, 5.5vh);
-      font-weight: 800;
-      letter-spacing: 0.1em;
-      color: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.25);
-      text-transform: uppercase;
-      user-select: none;
-      text-align: center;
-    }
-
-    .pr-panel-header {
+    .person {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: calc(clamp(1.05rem, 1.9vh, 1.9rem) * var(--fit, 1));
-      font-weight: 700;
-      color: var(--cp);
-      margin-bottom: calc(0.9vh * var(--fit, 1));
+      gap: 12px;
+      padding: 1vh 12px;
+      border-radius: 10px;
+      font-size: clamp(16px, 2.5vh, 26px);
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.12s, color 0.12s;
     }
 
-    .pr-panel-header .pr-panel-role {
-      font-size: 0.6em;
+    .person:hover { background: var(--cp-bg); }
+    .person:focus { outline: none; }
+    .person:focus-visible { outline: 2px solid var(--cp); outline-offset: -2px; }
+
+    .person .pos {
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 1.75em;
+      height: 1.75em;
+      border-radius: 50%;
+      font-size: 0.62em;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      background: var(--cp-bg);
+      color: var(--cp);
+    }
+
+    .person .label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Already spoke: fades back so the remaining people stand out */
+    .person.done { color: var(--muted); }
+    .person.done .pos { background: transparent; color: var(--muted); }
+
+    .person.selected { background: var(--cp); color: #fff; }
+    .person.selected .pos { background: rgb(255 255 255 / 0.22); color: #fff; }
+
+    /* QA / Support members keep a green identity */
+    .person.qa .pos { background: var(--qa-bg); color: var(--qa); }
+    .person.qa:hover { background: var(--qa-bg); }
+    .person.qa.selected { background: var(--qa); color: #fff; }
+    .person.qa.selected .pos { background: rgb(255 255 255 / 0.22); color: #fff; }
+
+    .person.dragging { opacity: 0.4; }
+
+    .sidebar-foot {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    .version { font-family: ui-monospace, Consolas, monospace; opacity: 0.6; }
+
+    /* ── Speaker (right) ──────────────────────────────────────────────────── */
+    .stage {
+      min-height: 0;
+      overflow-y: auto;
+      padding: 3.5vh 3vw;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* margin-block:auto centres short content but still scrolls from the top
+       when a long PR doesn't fit (justify-content:center would clip it). */
+    .stage-inner { --fit: 1; margin-block: auto; width: 100%; }
+
+    .stage-empty {
+      margin: auto;
+      max-width: 32ch;
+      text-align: center;
+      color: var(--muted);
+      font-size: clamp(18px, 3vh, 30px);
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .speaker {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      margin-bottom: calc(2.4vh * var(--fit));
+    }
+
+    .speaker-name {
+      margin: 0;
+      font-size: calc(clamp(28px, 5.2vh, 60px) * var(--fit));
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+    }
+
+    .speaker-pos {
+      font-size: calc(clamp(13px, 1.8vh, 19px) * var(--fit));
+      font-weight: 600;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .badge {
+      font-size: calc(clamp(11px, 1.5vh, 15px) * var(--fit));
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--cp);
-      border: 1px solid rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.45);
-      background: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.08);
-      border-radius: 4px;
-      padding: 2px 8px;
+      padding: 0.25em 0.6em;
+      border-radius: 6px;
+      background: var(--qa-bg);
+      color: var(--qa);
     }
 
-    .pr-cards {
+    .no-prs {
+      margin: 0;
+      color: var(--muted);
+      font-size: calc(clamp(16px, 2.4vh, 24px) * var(--fit));
+    }
+
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .pr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+      gap: calc(2vh * var(--fit)) 1.4vw;
+      align-items: start;
+    }
+
+    /* A lone PR shouldn't stretch into one very long line */
+    .pr-grid.single { max-width: 980px; }
+
+    .pr-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--cp);
+      border-radius: var(--radius);
+      padding: calc(2vh * var(--fit)) calc(1.4vw * var(--fit) + 8px);
+      box-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 4px 16px rgb(16 24 40 / 0.06);
+      animation: card-in 0.18s ease both;
+    }
+
+    .pr-card.qa { border-top-color: var(--qa); }
+
+    .pr-meta {
       display: flex;
       flex-wrap: wrap;
-      gap: 1.2vh 1.2vw;
-      align-items: flex-start;
-    }
-
-    .pr-branch-card {
-      box-sizing: border-box;
-      flex: 1 1 0;
-      min-width: 260px;
-      /* Cap the measure (~75 chars/line) so a lone PR doesn't span the panel */
-      max-width: calc(60vh * var(--fit, 1));
-      background: #fff;
-      border-radius: 10px;
-      border-left: 4px solid var(--cp);
-      box-shadow: 0 4px 18px rgba(0,0,0,0.13);
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      padding: calc(1vh * var(--fit, 1)) calc(1.4vh * var(--fit, 1));
-      animation: pr-card-in 0.15s ease both;
-    }
-
-    @media (max-width: 1000px) {
-      .pr-cards { flex-direction: column; align-items: stretch; }
-      .pr-branch-card { flex: 0 0 auto; min-width: 0; max-width: none; }
-    }
-
-    .pr-branch-card .pr-repo {
-      display: block;
-      font-size: calc(clamp(0.84rem, 1.5vh, 2rem) * var(--fit, 1));
-      font-weight: 700;
-      color: var(--cp);
-      text-transform: lowercase;
-      margin-bottom: 3px;
-      letter-spacing: 0.02em;
-      overflow-wrap: break-word;
-    }
-    .pr-branch-card .pr-title {
-      display: block;
-      font-size: calc(clamp(1.02rem, 1.9vh, 2.6rem) * var(--fit, 1));
-      font-weight: 600;
-      color: #222;
-      white-space: normal;
-      overflow-wrap: break-word;
-    }
-    .pr-branch-card .pr-num {
-      font-size: 0.86em;
-      font-weight: 700;
-      color: rgb(var(--cp-r) var(--cp-g) var(--cp-b) / 0.5);
-      margin-right: 4px;
-    }
-    .pr-branch-card .pr-branch-ref {
-      display: block;
-      font-size: calc(clamp(0.78rem, 1.4vh, 1.9rem) * var(--fit, 1));
-      font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
-      color: #222;
-      margin-top: 4px;
-      white-space: normal;
-      overflow-wrap: break-word;
-    }
-    .pr-branch-card .pr-branch-arrow { margin: 0 4px; color: #222; }
-    .pr-branch-card .pr-body {
-      margin-top: calc(0.7vh * var(--fit, 1));
-      font-size: calc(clamp(0.84rem, 1.5vh, 2rem) * var(--fit, 1));
-      font-weight: 400;
-      color: #222;
-      line-height: 1.5;
-      white-space: normal;
-      overflow-wrap: break-word;
-    }
-    /* QA / Support card variant */
-    .pr-branch-card--qa { border-left-color: #059669; }
-    .pr-branch-card--qa::before {
-      content: 'QA';
-      position: absolute;
-      top: 10px;
-      right: 12px;
-      font-size: 0.6rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      color: #059669;
-      background: rgba(5,150,105,0.08);
-      border: 1px solid rgba(5,150,105,0.25);
-      border-radius: 4px;
-      padding: 1px 6px;
-      text-transform: uppercase;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    .pr-branch-card--qa .pr-repo         { color: #059669; }
-    .pr-branch-card--qa .pr-num          { color: rgba(5,150,105,0.5); }
-    .pr-branch-card--qa .pr-branch-ref   { color: #222; }
-    .pr-branch-card--qa .pr-branch-arrow { color: #222; }
-    .pr-branch-card--qa::before { display: none; }
-    .pr-panel-header--qa,
-    .pr-panel-header--qa .pr-panel-role { color: #059669; }
-    .pr-panel-header--qa .pr-panel-role {
-      border-color: rgba(5,150,105,0.45);
-      background: rgba(5,150,105,0.08);
-    }
-    .footer {
-      position: fixed;
-      bottom: 10px;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: center;
       align-items: baseline;
-      gap: 1.5em;
-      font-size: 0.7rem;
-      font-family: monospace;
-      color: #667;
-      opacity: 0.5;
-      pointer-events: none;
-      z-index: 9999;
+      gap: 2px 10px;
+      font-size: calc(clamp(12px, 1.6vh, 17px) * var(--fit));
     }
 
+    .pr-repo { font-weight: 700; color: var(--cp); }
+    .pr-card.qa .pr-repo { color: var(--qa); }
+    .pr-num { font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    .pr-title {
+      margin: 0.35em 0 0.5em;
+      font-size: calc(clamp(17px, 2.5vh, 28px) * var(--fit));
+      font-weight: 700;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .pr-branch {
+      display: inline-block;
+      max-width: 100%;
+      padding: 0.2em 0.55em;
+      border-radius: 6px;
+      background: var(--chip);
+      color: var(--muted);
+      font-family: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+      font-size: calc(clamp(11px, 1.45vh, 16px) * var(--fit));
+      overflow-wrap: anywhere;
+    }
+
+    .pr-body {
+      margin: 0.85em 0 0;
+      font-size: calc(clamp(14px, 2vh, 22px) * var(--fit));
+      line-height: 1.55;
+      color: var(--ink-soft);
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 700px) {
+      .main { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--line); max-height: 38vh; }
+      .topbar { padding-inline: 16px; }
+      .stage { padding: 20px 16px; }
+    }
   </style>
 </head>
 <body>
 
-  <div class="blob-mid"></div>
-  <img src="./assets/wedigitek.png" alt="Logo" class="top-left-link" id="logo">
-  <div class="timer" id="timer">00:00</div>
+  <div class="shell">
+    <header class="topbar">
+      <img src="./assets/wedigitek.png" alt="Logo" class="logo" id="logo">
+      <div class="timer" id="timer" aria-live="off">00:00</div>
+      <button class="roll-btn" id="startBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/>
+        </svg>
+        <span id="startBtnLabel"></span>
+      </button>
+    </header>
 
-  <div class="app">
-    <div class="names-col">
-      <button id="startBtn" onclick="startSession()"></button>
-      <ul id="nameList" style="display:none;"></ul>
+    <div class="main">
+      <aside class="sidebar">
+        <div class="people-empty" id="peopleEmpty"></div>
+        <ol class="people" id="nameList" hidden></ol>
+        <div class="sidebar-foot">
+          <span id="hint"></span>
+          <span id="dataAge"></span>
+          <span class="version">__VERSION__</span>
+        </div>
+      </aside>
+
+      <main class="stage" id="stage"></main>
     </div>
-    <div class="pr-panel" id="prPanel"></div>
   </div>
 
   <script src="participants.js"></script>
@@ -411,22 +389,51 @@
   <script src="pr-data.example.js"></script>
   <script>
     const TRANSLATIONS = {
-      en: { startBtn: 'Presentation Order', reroll: 'Reroll', hint: 'click a name to pin their PRs · ↑/↓ to switch · Esc to clear · drag cards to reorder', click: 'click on user', noPRs: 'nothing to show for now' },
-      pt: { startBtn: 'Ordem de Apresentação', reroll: 'Reembaralhar', hint: 'clique num nome para fixar os PRs · ↑/↓ para trocar · Esc limpa · arraste os cartões para reordenar', click: 'clique num utilizador', noPRs: 'nada para mostrar por agora' }
+      en: {
+        startBtn: 'Presentation Order',
+        reroll: 'Reroll',
+        intro: 'Press “Presentation Order” to shuffle today’s order',
+        orderHere: 'The order shows up here',
+        click: 'Click a name to show their work',
+        noPRs: 'nothing to show for now',
+        hint: 'Click a name · ↑/↓ to switch · Esc to clear · drag to reorder',
+        updated: 'PRs fetched {t}',
+        noData: 'PR data unavailable'
+      },
+      pt: {
+        startBtn: 'Ordem de Apresentação',
+        reroll: 'Reembaralhar',
+        intro: 'Carregue em “Ordem de Apresentação” para baralhar a ordem de hoje',
+        orderHere: 'A ordem aparece aqui',
+        click: 'Clique num nome para ver o trabalho',
+        noPRs: 'nada para mostrar por agora',
+        hint: 'Clique num nome · ↑/↓ para trocar · Esc limpa · arraste para reordenar',
+        updated: 'PRs obtidos {t}',
+        noData: 'Dados de PRs indisponíveis'
+      }
     };
     const lang = navigator.language && navigator.language.startsWith('pt') ? 'pt' : 'en';
     const t = TRANSLATIONS[lang];
+    document.documentElement.lang = lang;
 
-    // Apply logo URL from config
-    const logoEl = document.getElementById('logo');
-    if (window.CONFIG && window.CONFIG.logoUrl) logoEl.src = window.CONFIG.logoUrl;
+    const cfg = window.CONFIG || {};
+    if (cfg.logoUrl) document.getElementById('logo').src = cfg.logoUrl;
 
-    document.getElementById('startBtn').textContent = t.startBtn;
+    const startBtn = document.getElementById('startBtn');
+    const startBtnLabel = document.getElementById('startBtnLabel');
+    const timerEl = document.getElementById('timer');
+    const listEl = document.getElementById('nameList');
+    const peopleEmptyEl = document.getElementById('peopleEmpty');
+    const stageEl = document.getElementById('stage');
+    const dataAgeEl = document.getElementById('dataAge');
+
+    startBtnLabel.textContent = t.startBtn;
+    peopleEmptyEl.textContent = t.orderHere;
+    document.getElementById('hint').textContent = t.hint;
 
     // Local preview (no Gist configured): always show the example members with
     // the example PR data — never real names without matching PRs.
-    const previewCfg = window.CONFIG || {};
-    const localPreview = !previewCfg.gistId || previewCfg.gistId === 'YOUR_GIST_ID';
+    const localPreview = !cfg.gistId || cfg.gistId === 'YOUR_GIST_ID';
     const sourceList = localPreview && window.PARTICIPANTS_EXAMPLE
       ? window.PARTICIPANTS_EXAMPLE
       : (window.PARTICIPANTS || []);
@@ -435,19 +442,20 @@
     );
     const names = participants.map(p => p.name);
     const participantByName = Object.fromEntries(participants.map(p => [p.name, p]));
+
+    let prData = null;
+    window.__prData = () => prData; // debug helper
+
     function isQA(name) {
       return ((prData && prData._roles) || {})[name] === 'support' ||
         (participantByName[name] || {}).role === 'support';
     }
-    let prData = null;
-    window.__prData = () => prData; // debug helper
 
-    // Display gate: the Gist keeps full PR text; the panel caps long
-    // descriptions so one verbose PR can't shrink everyone's cards to
-    // unreadable. CONFIG.prBodyMaxChars overrides it; 0 disables the gate.
-    const PR_BODY_MAX_CHARS = Number.isInteger(previewCfg.prBodyMaxChars) && previewCfg.prBodyMaxChars >= 0
-      ? previewCfg.prBodyMaxChars
-      : 600;
+    // The Gist keeps the full PR text and the page shows all of it.
+    // CONFIG.prBodyMaxChars > 0 brings back a display cap if ever needed.
+    const PR_BODY_MAX_CHARS = Number.isInteger(cfg.prBodyMaxChars) && cfg.prBodyMaxChars >= 0
+      ? cfg.prBodyMaxChars
+      : 0;
     function clampText(text, max) {
       const s = String(text).trim();
       if (!max || s.length <= max) return s;
@@ -458,150 +466,145 @@
       return kept.replace(/[\s.,;:·\-–—]+$/, '') + '…';
     }
 
-    const listEl = document.getElementById("nameList");
-    const panelEl = document.getElementById("prPanel");
-    const emptyEl = document.createElement('div');
-    emptyEl.className = 'pr-panel-empty';
-    // Name currently rendered in the PR panel — guards against no-op re-renders (flicker)
-    let panelName = null;
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
 
+    // ── Timer ────────────────────────────────────────────────────────────────
     let seconds = 0;
     let timerInterval = null;
 
     function startTimer() {
       if (timerInterval) return;
-
       timerInterval = setInterval(() => {
         seconds++;
         const mins = String(Math.floor(seconds / 60)).padStart(2, '0');
         const secs = String(seconds % 60).padStart(2, '0');
-        document.getElementById("timer").textContent = `${mins}:${secs}`;
+        timerEl.textContent = `${mins}:${secs}`;
       }, 1000);
     }
 
-    function resetTimer() {
-      clearInterval(timerInterval);
-      timerInterval = null;
-      seconds = 0;
-      document.getElementById("timer").textContent = "00:00";
-    }
-
-    // Pinned speaker: click a name (or use arrow keys) so the PRs stay up
-    // without holding the mouse still during the call.
+    // ── Order list ───────────────────────────────────────────────────────────
+    let started = false;
     let selectedIdx = -1;
+    const spoken = new Set(); // people who already had their turn this round
+    let hoverTimer = null;
 
-    let prHoverTimer = null;
-    function displayNames(arr) {
-      listEl.innerHTML = "";
-      selectedIdx = -1;
-      arr.forEach((name, i) => {
-        const li = document.createElement("li");
+    function renderList() {
+      listEl.innerHTML = '';
+      names.forEach((name, i) => {
+        const li = document.createElement('li');
+        li.className = 'person';
         li.tabIndex = 0;
-        li.setAttribute("draggable", "true");
-        if (isQA(name)) li.classList.add('qa');
-        addDragAndDropHandlers(li);
-        const liLabel = document.createElement("span");
-        liLabel.className = "li-label";
-        liLabel.textContent = name;
-        li.appendChild(liLabel);
+        li.draggable = true;
+        li.dataset.name = name;
+        li.innerHTML = `<span class="pos">${i + 1}</span><span class="label">${escapeHtml(name)}</span>`;
         li.addEventListener('mouseenter', () => {
-          prHoverTimer = setTimeout(() => showPRBranches(li, name), 150);
+          clearTimeout(hoverTimer);
+          hoverTimer = setTimeout(() => showSpeaker(name), 150);
         });
         li.addEventListener('mouseleave', () => {
-          clearTimeout(prHoverTimer);
+          clearTimeout(hoverTimer);
           restoreSelection();
         });
+        addDragAndDropHandlers(li);
         listEl.appendChild(li);
       });
-      listEl.addEventListener('click', (e) => {
-        const li = e.target.closest('li');
-        if (li) selectParticipant(li);
-      });
-      listEl.addEventListener('keydown', (e) => {
-        const li = e.target.closest('li');
-        if (li && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); selectParticipant(li); }
+      refreshListState();
+    }
+
+    // Classes and position numbers follow the current DOM order
+    function refreshListState() {
+      Array.from(listEl.children).forEach((li, i) => {
+        const name = li.dataset.name;
+        li.querySelector('.pos').textContent = i + 1;
+        li.classList.toggle('qa', isQA(name));
+        li.classList.toggle('selected', i === selectedIdx);
+        li.classList.toggle('done', i !== selectedIdx && spoken.has(name));
       });
     }
 
-    function selectParticipant(target) {
+    function selectParticipant(i) {
       const items = listEl.children;
-      const i = typeof target === 'number' ? target : Array.prototype.indexOf.call(items, target);
       if (i < 0 || i >= items.length) return;
-      if (selectedIdx >= 0 && items[selectedIdx]) items[selectedIdx].classList.remove('selected');
+      if (selectedIdx >= 0 && items[selectedIdx]) spoken.add(items[selectedIdx].dataset.name);
       if (selectedIdx === i) {
         selectedIdx = -1;
-        hidePRBranches();
       } else {
         selectedIdx = i;
-        items[i].classList.add('selected');
+        spoken.delete(items[i].dataset.name);
         items[i].focus({ preventScroll: true });
-        showPRBranches(items[i], items[i].querySelector('.li-label').textContent);
+        items[i].scrollIntoView({ block: 'nearest' });
       }
+      refreshListState();
+      restoreSelection();
+    }
+
+    function clearSelection() {
+      if (selectedIdx < 0) return;
+      selectParticipant(selectedIdx);
     }
 
     function moveSelection(dir) {
-      const items = listEl.children;
-      if (!items.length) return;
-      let i = selectedIdx < 0 ? (dir > 0 ? 0 : items.length - 1) : selectedIdx + dir;
-      if (i < 0) i = items.length - 1;
-      if (i >= items.length) i = 0;
+      const count = listEl.children.length;
+      if (!count) return;
+      let i = selectedIdx < 0 ? (dir > 0 ? 0 : count - 1) : selectedIdx + dir;
+      if (i < 0) i = count - 1;
+      if (i >= count) i = 0;
       selectParticipant(i);
     }
 
     function restoreSelection() {
-      const items = listEl.children;
-      if (selectedIdx >= 0 && items[selectedIdx]) {
-        showPRBranches(items[selectedIdx], items[selectedIdx].querySelector('.li-label').textContent);
-      } else {
-        hidePRBranches();
-      }
+      const li = listEl.children[selectedIdx];
+      if (li) showSpeaker(li.dataset.name);
+      else showMessage(started ? t.click : t.intro);
     }
 
-    document.addEventListener('keydown', (e) => {
-      if (listEl.style.display === 'none') return;
-      if (e.key === 'ArrowDown') { e.preventDefault(); moveSelection(1); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); moveSelection(-1); }
-      else if (e.key === 'Escape' && selectedIdx >= 0) {
-        listEl.children[selectedIdx].classList.remove('selected');
-        selectedIdx = -1;
-        hidePRBranches();
+    // Listeners are attached once; the <li>s are rebuilt on every reroll
+    listEl.addEventListener('click', (e) => {
+      const li = e.target.closest('li');
+      if (li) selectParticipant(Array.prototype.indexOf.call(listEl.children, li));
+    });
+
+    listEl.addEventListener('keydown', (e) => {
+      const li = e.target.closest('li');
+      if (li && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        selectParticipant(Array.prototype.indexOf.call(listEl.children, li));
       }
     });
 
+    document.addEventListener('keydown', (e) => {
+      if (!started) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); moveSelection(1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); moveSelection(-1); }
+      else if (e.key === 'Escape') clearSelection();
+    });
+
     function addDragAndDropHandlers(item) {
-      item.addEventListener("dragstart", () => {
-        item.classList.add("dragging");
-        const prevSelected = listEl.children[selectedIdx];
-        if (prevSelected) prevSelected.classList.remove('selected');
-        selectedIdx = -1;
+      item.addEventListener('dragstart', () => {
+        clearTimeout(hoverTimer);
+        item.classList.add('dragging');
+      });
+
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
+        const selectedName = listEl.children[selectedIdx] && names[selectedIdx];
+        names.length = 0;
+        Array.from(listEl.children).forEach(li => names.push(li.dataset.name));
+        selectedIdx = selectedName ? names.indexOf(selectedName) : -1;
+        refreshListState();
         restoreSelection();
       });
 
-      item.addEventListener("dragend", () => {
-        item.classList.remove("dragging");
-        updateArrayFromDOM();
-      });
-
-      item.addEventListener("dragover", (e) => {
+      item.addEventListener('dragover', (e) => {
         e.preventDefault();
-        const dragging = document.querySelector(".dragging");
+        const dragging = listEl.querySelector('.dragging');
         if (!dragging || dragging === item) return;
-
         const rect = item.getBoundingClientRect();
-        const offset = e.clientY - rect.top;
-
-        if (offset > rect.height / 2) {
-          item.after(dragging);
-        } else {
-          item.before(dragging);
-        }
+        if (e.clientY - rect.top > rect.height / 2) item.after(dragging);
+        else item.before(dragging);
       });
-    }
-
-    function updateArrayFromDOM() {
-      const items = document.querySelectorAll("#nameList li");
-      names.length = 0;
-      items.forEach(li => names.push(li.querySelector('.li-label').textContent));
     }
 
     function shuffle(array) {
@@ -611,113 +614,79 @@
       }
     }
 
-    // Kick off PR data fetch in background immediately — ready before first hover
-    loadPRData();
-
-    async function startSession() {
-      hidePRBranches();
-      shuffle(names);
-      displayNames(names);
-      listEl.style.display = "block";
-      startTimer();
-      document.getElementById("startBtn").textContent = t.reroll;
+    startBtn.addEventListener('click', () => {
+      started = true;
       document.body.classList.add('started');
-      const hintEl = document.getElementById('hint');
-      hintEl.textContent = t.hint;
-      hintEl.style.display = '';
+      selectedIdx = -1;
+      spoken.clear();
+      shuffle(names);
+      renderList();
+      listEl.hidden = false;
+      peopleEmptyEl.hidden = true;
+      startBtnLabel.textContent = t.reroll;
+      startTimer();
+      restoreSelection();
+    });
+
+    // ── Speaker stage ────────────────────────────────────────────────────────
+    let stageName = null; // guards against no-op re-renders (flicker)
+
+    function showMessage(text) {
+      stageName = null;
+      stageEl.innerHTML = `<div class="stage-empty">${escapeHtml(text)}</div>`;
     }
 
-    async function loadPRData() {
-      const cfg = window.CONFIG || {};
-      const gistId = cfg.gistId;
-      if (!gistId || gistId === 'YOUR_GIST_ID') {
-        if (window.PR_DATA_EXAMPLE) { prData = window.PR_DATA_EXAMPLE; console.log('[PR] using example data', Object.keys(prData)); }
-        return;
+    function showSpeaker(name) {
+      if (stageName === name) return;
+      stageName = name;
+
+      const qa = isQA(name);
+      const prs = (prData && prData[name]) || [];
+      const pos = names.indexOf(name) + 1;
+
+      let html = '<div class="stage-inner"><div class="speaker">' +
+        `<h1 class="speaker-name">${escapeHtml(name)}</h1>` +
+        (qa ? '<span class="badge">QA</span>' : '') +
+        (pos > 0 ? `<span class="speaker-pos">${pos} / ${names.length}</span>` : '') +
+        '</div>';
+
+      if (!prs.length) {
+        html += `<p class="no-prs">${escapeHtml(t.noPRs)}</p>`;
+      } else {
+        html += `<div class="pr-grid${prs.length === 1 ? ' single' : ''}">`;
+        prs.forEach((pr, idx) => {
+          html +=
+            `<article class="pr-card${qa ? ' qa' : ''}" style="animation-delay:${idx * 0.06}s">` +
+              '<div class="pr-meta">' +
+                `<span class="pr-repo">${escapeHtml(pr.repo || '')}</span>` +
+                `<span class="pr-num">#${escapeHtml(pr.number)}</span>` +
+              '</div>' +
+              `<h2 class="pr-title">${escapeHtml(pr.title || '')}</h2>` +
+              (pr.branch ? `<span class="pr-branch">${escapeHtml(pr.branch)} → ${escapeHtml(pr.baseBranch || 'main')}</span>` : '') +
+              (pr.body ? `<p class="pr-body">${escapeHtml(clampText(pr.body, PR_BODY_MAX_CHARS))}</p>` : '') +
+            '</article>';
+        });
+        html += '</div>';
       }
-      const urls = [];
-      if (cfg.gistUser) urls.push(`https://gist.githubusercontent.com/${cfg.gistUser}/${gistId}/raw/pr-data.json`);
-      urls.push(`https://api.github.com/gists/${gistId}`);
-      for (const url of urls) {
-        try {
-          const r = await fetch(url);
-          if (!r.ok) continue;
-          if (url.includes('/raw/')) {
-            prData = await r.json();
-          } else {
-            const gist = await r.json();
-            const file = gist.files['pr-data.json'];
-            if (file) prData = JSON.parse(file.content);
-          }
-          if (prData) { panelName = null; console.log('[PR] data loaded', Object.keys(prData)); return; }
-        } catch (e) { console.warn('[PR] loadPRData failed', url, e); }
-      }
+      html += '</div>';
+
+      stageEl.innerHTML = html;
+      stageEl.scrollTop = 0;
+      fitStage();
     }
 
-    function hidePRBranches() {
-      panelName = null;
-      emptyEl.textContent = t.click;
-      if (panelEl.firstElementChild === emptyEl) return;
-      panelEl.innerHTML = '';
-      panelEl.appendChild(emptyEl);
-    }
-
-    function showPRBranches(li, name) {
-      const prs = prData && prData[name];
-      if (panelName === name) return;
-      if (!prs || !prs.length) {
-        // Keep the person pinned in the list; explain the empty panel instead
-        // of asking for a click that already happened.
-        panelName = name;
-        emptyEl.textContent = t.noPRs;
-        panelEl.innerHTML = '';
-        panelEl.appendChild(emptyEl);
-        return;
-      }
-      panelName = name;
-      const isSupport = isQA(name);
-      panelEl.innerHTML = '';
-
-      const role = isSupport ? 'QA' : null;
-      const header = document.createElement('div');
-      header.className = 'pr-panel-header' + (isSupport ? ' pr-panel-header--qa' : '');
-      header.innerHTML = escapeHtml(name) + (role ? ` <span class="pr-panel-role">${role}</span>` : '');
-
-      const inner = document.createElement('div');
-      inner.className = 'pr-panel-inner';
-      inner.appendChild(header);
-
-      const cards = document.createElement('div');
-      cards.className = 'pr-cards';
-
-      (prs || []).forEach((pr, idx) => {
-        const card = document.createElement('div');
-        card.className = 'pr-branch-card' + (isSupport ? ' pr-branch-card--qa' : '');
-        card.style.animationDelay = `${idx * 0.07}s`;
-        card.innerHTML =
-          `<span class="pr-repo">${escapeHtml(pr.repo || '')}</span>` +
-          (pr.branch ? `<span class="pr-branch-ref">${escapeHtml(pr.branch)}<span class="pr-branch-arrow">→</span>${escapeHtml(pr.baseBranch || 'main')}</span>` : '') +
-          `<span class="pr-title"><span class="pr-num">#${pr.number}</span>${escapeHtml(pr.title)}</span>` +
-          (pr.body ? `<div class="pr-body">${escapeHtml(clampText(pr.body, PR_BODY_MAX_CHARS))}</div>` : '');
-        cards.appendChild(card);
-      });
-
-      inner.appendChild(cards);
-      panelEl.appendChild(inner);
-
-      fitPanel();
-    }
-
-    // Pick the largest font multiplier (within FIT_MIN..FIT_MAX) whose layout
-    // fits the panel: long PRs reflow smaller, short ones read bigger on a
-    // shared screen. Below FIT_MIN text would be illegible, so anything still
-    // too tall is clipped by the panel's overflow: hidden.
-    const FIT_MIN = 0.6;
-    const FIT_MAX = 1.3;
-    const FIT_FILL = 0.92; // leave some breathing room above and below
-    function fitPanel() {
-      const inner = panelEl.querySelector('.pr-panel-inner');
-      const maxH = panelEl.clientHeight * FIT_FILL;
-      if (!inner || maxH <= 0) return;
+    // Pick the largest font multiplier (FIT_MIN..FIT_MAX) whose layout fits
+    // the stage: short PRs read bigger on a shared screen, long ones shrink a
+    // little. Anything still too tall at FIT_MIN scrolls instead of clipping.
+    const FIT_MIN = 0.85;
+    const FIT_MAX = 1.5;
+    const FIT_FILL = 0.96;
+    function fitStage() {
+      const inner = stageEl.querySelector('.stage-inner');
+      if (!inner) return;
+      const cs = getComputedStyle(stageEl);
+      const maxH = (stageEl.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) * FIT_FILL;
+      if (maxH <= 0) return;
       const fits = (f) => {
         inner.style.setProperty('--fit', f);
         return inner.offsetHeight <= maxH;
@@ -725,7 +694,7 @@
       if (fits(FIT_MAX)) return;
       if (!fits(FIT_MIN)) return;
       let lo = FIT_MIN, hi = FIT_MAX;
-      for (let i = 0; i < 7; i++) { // ~0.005 precision
+      for (let i = 0; i < 7; i++) {
         const mid = (lo + hi) / 2;
         if (fits(mid)) lo = mid; else hi = mid;
       }
@@ -735,19 +704,55 @@
     let fitFrame = 0;
     window.addEventListener('resize', () => {
       cancelAnimationFrame(fitFrame);
-      fitFrame = requestAnimationFrame(fitPanel);
+      fitFrame = requestAnimationFrame(fitStage);
     });
 
-    function escapeHtml(s) {
-      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // ── PR data ──────────────────────────────────────────────────────────────
+    function showDataAge() {
+      const at = prData && Date.parse(prData.updatedAt);
+      if (!at) { dataAgeEl.textContent = prData ? '' : t.noData; return; }
+      const mins = Math.round((Date.now() - at) / 60000);
+      const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' });
+      const ago = mins < 60 ? rtf.format(-mins, 'minute')
+        : mins < 48 * 60 ? rtf.format(-Math.round(mins / 60), 'hour')
+        : rtf.format(-Math.round(mins / 1440), 'day');
+      dataAgeEl.textContent = t.updated.replace('{t}', ago);
     }
 
-  </script>
+    async function loadPRData() {
+      const gistId = cfg.gistId;
+      if (localPreview) {
+        if (window.PR_DATA_EXAMPLE) prData = window.PR_DATA_EXAMPLE;
+      } else {
+        const urls = [];
+        if (cfg.gistUser) urls.push(`https://gist.githubusercontent.com/${cfg.gistUser}/${gistId}/raw/pr-data.json`);
+        urls.push(`https://api.github.com/gists/${gistId}`);
+        for (const url of urls) {
+          try {
+            const r = await fetch(url);
+            if (!r.ok) continue;
+            if (url.includes('/raw/')) {
+              prData = await r.json();
+            } else {
+              const file = (await r.json()).files['pr-data.json'];
+              if (file) prData = JSON.parse(file.content);
+            }
+            if (prData) break;
+          } catch (e) { console.warn('[PR] loadPRData failed', url, e); }
+        }
+      }
+      showDataAge();
+      // Data may arrive after someone was already picked: redraw with it
+      if (started) {
+        refreshListState();
+        stageName = null;
+        restoreSelection();
+      }
+    }
 
-  <div class="footer">
-    <span id="hint" style="display:none"></span>
-    <span>__VERSION__</span>
-  </div>
+    showMessage(t.intro);
+    loadPRData();
+  </script>
 
 </body>
 </html>
