@@ -68,13 +68,22 @@ jobs:
           sed -i "s/__VERSION__/${VERSION}/g" index.html
           echo "Version set to ${VERSION}"
 
+      - name: Collect site files
+        # Publish only what index.html loads, not the whole repo (README, workflows, scripts).
+        # participants.js is optional: without it the page falls back to the example list.
+        run: |
+          mkdir -p _site
+          cp -r index.html config.js config.example.js participants.example.js pr-data.example.js assets _site/
+          if [ -f participants.js ]; then cp participants.js _site/; fi
+          echo "Publishing:"; find _site -type f | sort
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment
