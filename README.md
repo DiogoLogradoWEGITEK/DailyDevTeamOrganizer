@@ -50,17 +50,17 @@ All sensitive config is kept in GitHub Actions secrets (**Settings → Secrets a
 
 ## PR hover feature
 
-A scheduled workflow (`.github/workflows/fetch-pr-data.yml`) runs Monday–Friday at 13:23 UTC (14:23 Lisbon in summer, 13:23 in winter — always inside the 12:00–15:00 window) with a small random jitter, so the data is fresh for the daily. It uses the GitHub GraphQL API to fetch each participant's 3 most recent merged PRs — title, body, branch name, target branch, and the last 5 commit messages. Bodies are stored in full, with markdown symbols and `<!-- -->` template comments stripped. If a PR has no body, the full first line of each commit message is joined and used as the description instead. Results are saved as `pr-data.json` in the Gist.
+A scheduled workflow (`.github/workflows/fetch-pr-data.yml`) is set for Monday–Friday at 13:23 UTC with a small random jitter. GitHub starts scheduled jobs late (usually in the evening UTC), so the daily shows the data fetched the evening before. It uses the GitHub GraphQL API to fetch each participant's 3 most recent merged PRs — title, body, branch name, target branch, and the last 5 commit messages. Bodies are stored in full, with markdown symbols and `<!-- -->` template comments stripped. If a PR has no body, the full first line of each commit message is joined and used as the description instead. Results are saved as `pr-data.json` in the Gist.
 
 The page fetches `pr-data.json` silently on load. Click a name to pin their PR panel on the right side of the screen — it stays up (no mouse needed) until you click again or pick someone else. Hovering a name still gives a quick preview. Each card shows the repo name, `branch → base`, PR number and title, and the body text (or commit subject lines as fallback), capped at 600 characters on screen.
 
 For **local preview without a Gist**, `pr-data.example.js` is loaded automatically when no `gistId` is configured and provides mock data matching the example participants.
 
-To trigger it manually: **Actions → Fetch PR Data → Run workflow**.
+To trigger it manually: **Actions → Fetch PR Data → Run workflow**. The run first checks `GH_TOKEN` (valid, `repo` + `gist` scopes, owns the Gist, expiry) and fails with a readable reason if something is off. If every PR search fails, the Gist is left untouched so the page keeps the last good data.
 
 ## Workflows
 
 | Workflow | Schedule | Purpose |
 | --- | --- | --- |
 | `deploy.yml` | On push to `main` | Builds and deploys to GitHub Pages, injects secrets, stamps git SHA as version |
-| `fetch-pr-data.yml` | Mon–Fri 13:23 UTC + jitter | Pre-fetches merged PRs for each participant into the Gist |
+| `fetch-pr-data.yml` | Mon–Fri, set for 13:23 UTC (runs late, usually evening) | Pre-fetches merged PRs for each participant into the Gist |

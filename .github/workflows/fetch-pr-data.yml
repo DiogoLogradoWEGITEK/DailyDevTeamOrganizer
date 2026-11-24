@@ -2,7 +2,9 @@ name: Fetch PR Data
 
 on:
   schedule:
-    - cron: "23 13 * * 1-5" # single daily run - 13:23 UTC is 14:23 Lisbon in summer and 13:23 in winter, always inside the 12:00-15:00 standup window; :23 avoids on-the-hour scheduler congestion
+    # Requested for 13:23 UTC on weekdays (:23 avoids on-the-hour congestion). GitHub runs scheduled jobs
+    # best-effort: in practice they start 7-12h late (evening UTC), so standup sees the previous evening's data.
+    - cron: "23 13 * * 1-5"
   workflow_dispatch: # allow manual trigger
 
 # Required secrets:
@@ -40,6 +42,80 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check token and Gist access
+        # Fails fast with a readable reason instead of silently caching empty data.
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::GH_TOKEN secret is not set."
+            exit 1
+          fi
+          if [ -z "$GIST_ID" ]; then
+            echo "::error::GIST_ID secret is not set."
+            exit 1
+          fi
+
+          HTTP=$(curl -s -o /tmp/user.json -D /tmp/user-headers.txt -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user) || HTTP=000
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::GH_TOKEN was rejected (HTTP $HTTP): it was deleted, expired or revoked. Create a new PAT and update the GH_TOKEN secret."
+            exit 1
+          fi
+
+          header() { grep -i "^$1:" /tmp/user-headers.txt | sed 's/^[^:]*:[[:space:]]*//' | tr -d '\r' || true; }
+          LOGIN=$(jq -r .login /tmp/user.json)
+          SCOPES=$(header x-oauth-scopes)
+          EXPIRY=$(header github-authentication-token-expiration)
+
+          case "$GH_TOKEN" in
+            ghp_*) TYPE="classic" ;;
+            github_pat_*) TYPE="fine-grained" ;;
+            *) TYPE="unknown" ;;
+          esac
+
+          echo "Token owner : $LOGIN"
+          echo "Token type  : $TYPE"
+          echo "Scopes      : ${SCOPES:-(not reported for fine-grained tokens)}"
+          echo "Expires     : ${EXPIRY:-never}"
+          {
+            echo "### Token check"
+            echo "| Owner | Type | Scopes | Expires |"
+            echo "| --- | --- | --- | --- |"
+            echo "| \`$LOGIN\` | $TYPE | ${SCOPES:-n/a} | ${EXPIRY:-never} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$TYPE" = "classic" ]; then
+            NORM_SCOPES=",$(printf '%s' "$SCOPES" | tr -d ' '),"
+            for NEEDED in repo gist; do
+              case "$NORM_SCOPES" in
+                *",$NEEDED,"*) ;;
+                *) echo "::error::GH_TOKEN is missing the '$NEEDED' scope (has: ${SCOPES:-none})."; exit 1 ;;
+              esac
+            done
+          fi
+
+          if [ -n "$EXPIRY" ]; then
+            EXP_TS=$(date -d "$EXPIRY" +%s 2>/dev/null) || EXP_TS=""
+            if [ -n "$EXP_TS" ]; then
+              DAYS_LEFT=$(( (EXP_TS - $(date +%s)) / 86400 ))
+              if [ "$DAYS_LEFT" -le 7 ]; then
+                echo "::warning::GH_TOKEN expires in $DAYS_LEFT day(s) ($EXPIRY). Renew it and update the secret."
+              fi
+            fi
+          fi
+
+          HTTP=$(curl -s -o /tmp/gist.json -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/gists/$GIST_ID") || HTTP=000
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::Gist $GIST_ID is not reachable with this token (HTTP $HTTP). Check GIST_ID and the token's gist access."
+            exit 1
+          fi
+          GIST_OWNER=$(jq -r '.owner.login // empty' /tmp/gist.json)
+          if [ "$GIST_OWNER" != "$LOGIN" ]; then
+            echo "::error::The Gist belongs to '${GIST_OWNER:-unknown}' but the token belongs to '$LOGIN', so the token cannot update it."
+            exit 1
+          fi
+          echo "Gist access OK (owned by $GIST_OWNER)."
+
       - name: Normalize PARTICIPANTS_JSON
         env:
           PARTICIPANTS_JSON: ${{ secrets.PARTICIPANTS_JSON }}
@@ -61,6 +137,9 @@ jobs:
           COUNT=$(echo "$NORMALIZED" | jq 'length')
 
           mkdir -p /tmp/prs
+          ATTEMPTED=0
+          FAILED=0
+          FOUND=0
 
           for i in $(seq 0 $((COUNT - 1))); do
             GITHUB=$(echo "$NORMALIZED" | jq -r ".[$i].github")
@@ -81,16 +160,41 @@ jobs:
             fi
             GRAPHQL_QUERY='query($q:String!){search(query:$q,type:ISSUE,first:3){nodes{...on PullRequest{title number repository{name} body headRefName baseRefName commits(last:5){nodes{commit{message}}}}}}}'
 
-            curl -sf \
+            ATTEMPTED=$((ATTEMPTED + 1))
+            RESP="/tmp/prs/${i}.resp.json"
+            HTTP=$(curl -s -o "$RESP" -w '%{http_code}' \
               -H "Authorization: bearer $GH_TOKEN" \
               -H "Content-Type: application/json" \
               -X POST "https://api.github.com/graphql" \
-              -d "$(jq -nc --arg q "$SEARCH_QUERY" --arg gql "$GRAPHQL_QUERY" '{query:$gql,variables:{q:$q}}')" \
-            | jq '[(.data.search.nodes//[])[]|select(.title!=null)|(.body//""|gsub("[*#`_~]";"")|gsub("[\r\n]+";" ")|gsub("<!--.*?-->";"")|gsub("  +";" ")|ltrimstr(" ")) as $b|{title,number,repo:.repository.name,body:(if ($b|length)>0 then $b else ([(.commits.nodes//[])[].commit.message|split("\n")[0]|rtrimstr("\r")]|join(" \u00b7 ")) end),branch:.headRefName,baseBranch:.baseRefName}]' \
-            > "/tmp/prs/${i}.json" || echo "[]" > "/tmp/prs/${i}.json"
+              -d "$(jq -nc --arg q "$SEARCH_QUERY" --arg gql "$GRAPHQL_QUERY" '{query:$gql,variables:{q:$q}}')") || HTTP=000
+
+            # GraphQL reports most problems as HTTP 200 with an "errors" array
+            ERR=$(jq -r '[.errors[]?.message, .message] | map(select(. != null)) | .[0] // empty' "$RESP" 2>/dev/null | head -c 300) || ERR=""
+            if [ "$HTTP" != "200" ] || ! jq -e '.data.search' "$RESP" > /dev/null 2>&1; then
+              echo "::warning::PR search failed for ${GITHUB} (HTTP $HTTP): ${ERR:-no details}"
+              FAILED=$((FAILED + 1))
+              echo "[]" > "/tmp/prs/${i}.json"
+            else
+              if [ -n "$ERR" ]; then
+                echo "::warning::PR search for ${GITHUB} returned partial results: $ERR"
+              fi
+              jq '[(.data.search.nodes//[])[]|select(.title!=null)|(.body//""|gsub("[*#`_~]";"")|gsub("[\r\n]+";" ")|gsub("<!--.*?-->";"")|gsub("  +";" ")|ltrimstr(" ")) as $b|{title,number,repo:.repository.name,body:(if ($b|length)>0 then $b else ([(.commits.nodes//[])[].commit.message|split("\n")[0]|rtrimstr("\r")]|join(" \u00b7 ")) end),branch:.headRefName,baseBranch:.baseRefName}]' \
+                "$RESP" > "/tmp/prs/${i}.json"
+              FOUND=$((FOUND + $(jq length "/tmp/prs/${i}.json")))
+            fi
 
             sleep 2 # stay within search rate limit (30 req/min authenticated)
           done
+
+          echo "Searches: $ATTEMPTED, failed: $FAILED, PRs found: $FOUND"
+          echo "**Searches:** $ATTEMPTED · **failed:** $FAILED · **PRs found:** $FOUND" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ATTEMPTED" -gt 0 ] && [ "$FAILED" -eq "$ATTEMPTED" ]; then
+            echo "::error::Every PR search failed. The Gist was left untouched so the page keeps the last good data."
+            exit 1
+          fi
+          if [ "$FOUND" -eq 0 ]; then
+            echo "::warning::No PRs found for anyone. Check GH_SEARCH_SCOPE and that the token can see those repos (for SSO orgs: Configure SSO → Authorize on the token)."
+          fi
 
           # Merge all results into {name: [{title, number}], updatedAt: "...", _roles: {...}}
           node -e "
