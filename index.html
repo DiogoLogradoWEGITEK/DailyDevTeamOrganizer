@@ -189,8 +189,9 @@
     }
 
     /* Already spoke: fades back so the remaining people stand out */
-    .person.done { color: var(--muted); }
+    .person.done { color: var(--muted); font-weight: 500; opacity: 0.45; }
     .person.done .pos { background: transparent; color: var(--muted); }
+    .person.done:hover { opacity: 0.75; }
 
     .person.selected { background: var(--cp); color: #fff; }
     .person.selected .pos { background: rgb(255 255 255 / 0.22); color: #fff; }
@@ -200,6 +201,9 @@
     .person.qa:hover { background: var(--qa-bg); }
     .person.qa.selected { background: var(--qa); color: #fff; }
     .person.qa.selected .pos { background: rgb(255 255 255 / 0.22); color: #fff; }
+    /* ...until they've spoken: then they go grey like everyone else */
+    .person.qa.done .pos { background: var(--chip); color: var(--muted); }
+    .person.qa.done:hover { background: var(--chip); }
 
     .person.dragging { opacity: 0.4; }
 
@@ -213,6 +217,16 @@
       font-size: 12px;
       line-height: 1.45;
       color: var(--muted);
+    }
+
+    /* PR data older than a working day: the daily fetch probably failed */
+    #dataAge.stale {
+      align-self: flex-start;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: #fef3c7;
+      color: #92400e;
+      font-weight: 600;
     }
 
     .version { font-family: ui-monospace, Consolas, monospace; opacity: 0.6; }
@@ -708,8 +722,24 @@
     });
 
     // ── PR data ──────────────────────────────────────────────────────────────
+    // Time between two instants with Saturdays and Sundays left out, so data
+    // fetched on Friday isn't flagged as stale on Monday.
+    function weekdayMs(from, to) {
+      let total = 0;
+      let cur = from;
+      while (cur < to) {
+        const d = new Date(cur);
+        const nextDay = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+        const end = Math.min(nextDay, to);
+        if (d.getDay() !== 0 && d.getDay() !== 6) total += end - cur;
+        cur = end;
+      }
+      return total;
+    }
+
     function showDataAge() {
       const at = prData && Date.parse(prData.updatedAt);
+      dataAgeEl.classList.toggle('stale', !!at && weekdayMs(at, Date.now()) > 24 * 3600 * 1000);
       if (!at) { dataAgeEl.textContent = prData ? '' : t.noData; return; }
       const mins = Math.round((Date.now() - at) / 60000);
       const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' });
